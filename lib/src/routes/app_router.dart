@@ -16,6 +16,10 @@ import 'package:project_pm/src/features/projects/views/project_grid_page.dart';
 import 'package:project_pm/src/features/projects/views/project_context_page.dart';
 import 'package:project_pm/src/features/projects/views/project_reports_page.dart';
 import 'package:project_pm/src/features/projects/views/project_settings_page.dart';
+import 'package:project_pm/src/features/auth/pages/login_page.dart';
+import 'package:project_pm/src/features/auth/pages/signup_page.dart';
+import 'package:project_pm/src/features/auth/pages/forgot_password_page.dart';
+import 'package:project_pm/src/features/auth/pages/reset_password_page.dart';
 
 part 'app_router.gr.dart';
 
@@ -23,7 +27,11 @@ part 'app_router.gr.dart';
 class AppRouter extends _$AppRouter {
   @override
   List<AutoRoute> get routes => [
-        AutoRoute(path: '/', page: StartupRoute.page, initial: true),
+        AutoRoute(path: '/', page: LoginRoute.page, initial: true),
+        AutoRoute(path: '/startup', page: StartupRoute.page),
+        AutoRoute(path: '/signup', page: SignupRoute.page),
+        AutoRoute(path: '/forgot-password', page: ForgotPasswordRoute.page),
+        AutoRoute(path: '/reset-password', page: ResetPasswordRoute.page),
         AutoRoute(path: '/app', page: ShellRoute.page, children: [
           AutoRoute(
               path: 'dashboard', page: DashboardRoute.page, initial: true),

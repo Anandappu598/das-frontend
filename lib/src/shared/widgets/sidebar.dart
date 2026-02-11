@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:auto_route/auto_route.dart';
 import 'package:project_pm/src/core/constants/enums.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/shared/providers/sidebar_providers.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
+import 'package:project_pm/src/features/auth/auth_state_providers.dart';
 
 import 'package:project_pm/src/core/database/database.dart';
 
@@ -335,6 +337,89 @@ class Sidebar extends HookConsumerWidget {
                   ),
                 ],
               ],
+            ),
+          ),
+
+          // Logout Button
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Tooltip(
+              message: !isEffectivelyExpanded ? 'Logout' : '',
+              child: InkWell(
+                onTap: () async {
+                  // Show confirmation dialog
+                  final shouldLogout = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Logout'),
+                      content: const Text('Are you sure you want to logout?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Logout'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (shouldLogout == true && context.mounted) {
+                    await ref.read(authNotifierProvider.notifier).logout();
+                    if (context.mounted) {
+                      context.router.replaceNamed('/');
+                    }
+                  }
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: !isEffectivelyExpanded ? 0 : 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.red.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: !isEffectivelyExpanded
+                        ? MainAxisAlignment.center
+                        : MainAxisAlignment.start,
+                    children: [
+                      Icon(
+                        FontAwesomeIcons.rightFromBracket,
+                        size: 20,
+                        color: Colors.red.shade700,
+                      ),
+                      if (isEffectivelyExpanded) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Logout',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red.shade700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            softWrap: false,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ],
