@@ -1,0 +1,391 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+// **************************************************************************
+// AutoRouterGenerator
+// **************************************************************************
+
+// ignore_for_file: type=lint
+// coverage:ignore-file
+
+part of 'app_router.dart';
+
+abstract class _$AppRouter extends RootStackRouter {
+  // ignore: unused_element
+  _$AppRouter({super.navigatorKey});
+
+  @override
+  final Map<String, PageFactory> pagesMap = {
+    AdminUserManagementRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const AdminUserManagementPage(),
+      );
+    },
+    ApprovalsRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ApprovalsPage(),
+      );
+    },
+    DashboardRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const DashboardPage(),
+      );
+    },
+    ProjectContextRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ProjectContextPage(),
+      );
+    },
+    ProjectDetailsRoute.name: (routeData) {
+      final pathParams = routeData.inheritedPathParams;
+      final args = routeData.argsAs<ProjectDetailsRouteArgs>(
+          orElse: () =>
+              ProjectDetailsRouteArgs(projectId: pathParams.getString('id')));
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: ProjectDetailsPage(
+          key: args.key,
+          projectId: args.projectId,
+        ),
+      );
+    },
+    ProjectGanttRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ProjectGanttPage(),
+      );
+    },
+    ProjectGridRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ProjectGridPage(),
+      );
+    },
+    ProjectPlanRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ProjectPlanPage(),
+      );
+    },
+    ProjectReportsRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ProjectReportsPage(),
+      );
+    },
+    ProjectSettingsRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ProjectSettingsPage(),
+      );
+    },
+    ProjectsPlaceholderRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ProjectsPlaceholderPage(),
+      );
+    },
+    ReportsRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ReportsPage(),
+      );
+    },
+    SettingsRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const SettingsPage(),
+      );
+    },
+    ShellRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const ShellPage(),
+      );
+    },
+    StartupRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const StartupPage(),
+      );
+    },
+    TeamOverviewRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const TeamOverviewPage(),
+      );
+    },
+    TodayRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const TodayPage(),
+      );
+    },
+  };
+}
+
+/// generated route for
+/// [AdminUserManagementPage]
+class AdminUserManagementRoute extends PageRouteInfo<void> {
+  const AdminUserManagementRoute({List<PageRouteInfo>? children})
+      : super(
+          AdminUserManagementRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'AdminUserManagementRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ApprovalsPage]
+class ApprovalsRoute extends PageRouteInfo<void> {
+  const ApprovalsRoute({List<PageRouteInfo>? children})
+      : super(
+          ApprovalsRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ApprovalsRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [DashboardPage]
+class DashboardRoute extends PageRouteInfo<void> {
+  const DashboardRoute({List<PageRouteInfo>? children})
+      : super(
+          DashboardRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'DashboardRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ProjectContextPage]
+class ProjectContextRoute extends PageRouteInfo<void> {
+  const ProjectContextRoute({List<PageRouteInfo>? children})
+      : super(
+          ProjectContextRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ProjectContextRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ProjectDetailsPage]
+class ProjectDetailsRoute extends PageRouteInfo<ProjectDetailsRouteArgs> {
+  ProjectDetailsRoute({
+    Key? key,
+    required String projectId,
+    List<PageRouteInfo>? children,
+  }) : super(
+          ProjectDetailsRoute.name,
+          args: ProjectDetailsRouteArgs(
+            key: key,
+            projectId: projectId,
+          ),
+          rawPathParams: {'id': projectId},
+          initialChildren: children,
+        );
+
+  static const String name = 'ProjectDetailsRoute';
+
+  static const PageInfo<ProjectDetailsRouteArgs> page =
+      PageInfo<ProjectDetailsRouteArgs>(name);
+}
+
+class ProjectDetailsRouteArgs {
+  const ProjectDetailsRouteArgs({
+    this.key,
+    required this.projectId,
+  });
+
+  final Key? key;
+
+  final String projectId;
+
+  @override
+  String toString() {
+    return 'ProjectDetailsRouteArgs{key: $key, projectId: $projectId}';
+  }
+}
+
+/// generated route for
+/// [ProjectGanttPage]
+class ProjectGanttRoute extends PageRouteInfo<void> {
+  const ProjectGanttRoute({List<PageRouteInfo>? children})
+      : super(
+          ProjectGanttRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ProjectGanttRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ProjectGridPage]
+class ProjectGridRoute extends PageRouteInfo<void> {
+  const ProjectGridRoute({List<PageRouteInfo>? children})
+      : super(
+          ProjectGridRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ProjectGridRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ProjectPlanPage]
+class ProjectPlanRoute extends PageRouteInfo<void> {
+  const ProjectPlanRoute({List<PageRouteInfo>? children})
+      : super(
+          ProjectPlanRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ProjectPlanRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ProjectReportsPage]
+class ProjectReportsRoute extends PageRouteInfo<void> {
+  const ProjectReportsRoute({List<PageRouteInfo>? children})
+      : super(
+          ProjectReportsRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ProjectReportsRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ProjectSettingsPage]
+class ProjectSettingsRoute extends PageRouteInfo<void> {
+  const ProjectSettingsRoute({List<PageRouteInfo>? children})
+      : super(
+          ProjectSettingsRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ProjectSettingsRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ProjectsPlaceholderPage]
+class ProjectsPlaceholderRoute extends PageRouteInfo<void> {
+  const ProjectsPlaceholderRoute({List<PageRouteInfo>? children})
+      : super(
+          ProjectsPlaceholderRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ProjectsPlaceholderRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ReportsPage]
+class ReportsRoute extends PageRouteInfo<void> {
+  const ReportsRoute({List<PageRouteInfo>? children})
+      : super(
+          ReportsRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ReportsRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [SettingsPage]
+class SettingsRoute extends PageRouteInfo<void> {
+  const SettingsRoute({List<PageRouteInfo>? children})
+      : super(
+          SettingsRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'SettingsRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [ShellPage]
+class ShellRoute extends PageRouteInfo<void> {
+  const ShellRoute({List<PageRouteInfo>? children})
+      : super(
+          ShellRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'ShellRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [StartupPage]
+class StartupRoute extends PageRouteInfo<void> {
+  const StartupRoute({List<PageRouteInfo>? children})
+      : super(
+          StartupRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'StartupRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [TeamOverviewPage]
+class TeamOverviewRoute extends PageRouteInfo<void> {
+  const TeamOverviewRoute({List<PageRouteInfo>? children})
+      : super(
+          TeamOverviewRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'TeamOverviewRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
+
+/// generated route for
+/// [TodayPage]
+class TodayRoute extends PageRouteInfo<void> {
+  const TodayRoute({List<PageRouteInfo>? children})
+      : super(
+          TodayRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'TodayRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
+}
