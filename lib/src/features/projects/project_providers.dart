@@ -35,6 +35,7 @@ final _mockProjects = [
           approvalStatus: null,
           githubLink: null,
           figmaLink: null,
+          taskType: 'standard',
         ),
         assignees: [],
       ),

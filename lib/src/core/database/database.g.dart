@@ -790,6 +790,26 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   late final GeneratedColumn<String> figmaLink = GeneratedColumn<String>(
       'figma_link', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _taskTypeMeta =
+      const VerificationMeta('taskType');
+  @override
+  late final GeneratedColumn<String> taskType = GeneratedColumn<String>(
+      'task_type', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('standard'));
+  static const VerificationMeta _recurrencePatternMeta =
+      const VerificationMeta('recurrencePattern');
+  @override
+  late final GeneratedColumn<String> recurrencePattern =
+      GeneratedColumn<String>('recurrence_pattern', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _nextOccurrenceMeta =
+      const VerificationMeta('nextOccurrence');
+  @override
+  late final GeneratedColumn<DateTime> nextOccurrence =
+      GeneratedColumn<DateTime>('next_occurrence', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -803,7 +823,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         assigneesJson,
         milestonesJson,
         githubLink,
-        figmaLink
+        figmaLink,
+        taskType,
+        recurrencePattern,
+        nextOccurrence
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -884,6 +907,22 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       context.handle(_figmaLinkMeta,
           figmaLink.isAcceptableOrUnknown(data['figma_link']!, _figmaLinkMeta));
     }
+    if (data.containsKey('task_type')) {
+      context.handle(_taskTypeMeta,
+          taskType.isAcceptableOrUnknown(data['task_type']!, _taskTypeMeta));
+    }
+    if (data.containsKey('recurrence_pattern')) {
+      context.handle(
+          _recurrencePatternMeta,
+          recurrencePattern.isAcceptableOrUnknown(
+              data['recurrence_pattern']!, _recurrencePatternMeta));
+    }
+    if (data.containsKey('next_occurrence')) {
+      context.handle(
+          _nextOccurrenceMeta,
+          nextOccurrence.isAcceptableOrUnknown(
+              data['next_occurrence']!, _nextOccurrenceMeta));
+    }
     return context;
   }
 
@@ -917,6 +956,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
           .read(DriftSqlType.string, data['${effectivePrefix}github_link']),
       figmaLink: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}figma_link']),
+      taskType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}task_type'])!,
+      recurrencePattern: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}recurrence_pattern']),
+      nextOccurrence: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}next_occurrence']),
     );
   }
 
@@ -939,6 +984,9 @@ class Task extends DataClass implements Insertable<Task> {
   final String milestonesJson;
   final String? githubLink;
   final String? figmaLink;
+  final String taskType;
+  final String? recurrencePattern;
+  final DateTime? nextOccurrence;
   const Task(
       {required this.id,
       required this.name,
@@ -951,7 +999,10 @@ class Task extends DataClass implements Insertable<Task> {
       required this.assigneesJson,
       required this.milestonesJson,
       this.githubLink,
-      this.figmaLink});
+      this.figmaLink,
+      required this.taskType,
+      this.recurrencePattern,
+      this.nextOccurrence});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -972,6 +1023,13 @@ class Task extends DataClass implements Insertable<Task> {
     }
     if (!nullToAbsent || figmaLink != null) {
       map['figma_link'] = Variable<String>(figmaLink);
+    }
+    map['task_type'] = Variable<String>(taskType);
+    if (!nullToAbsent || recurrencePattern != null) {
+      map['recurrence_pattern'] = Variable<String>(recurrencePattern);
+    }
+    if (!nullToAbsent || nextOccurrence != null) {
+      map['next_occurrence'] = Variable<DateTime>(nextOccurrence);
     }
     return map;
   }
@@ -996,6 +1054,13 @@ class Task extends DataClass implements Insertable<Task> {
       figmaLink: figmaLink == null && nullToAbsent
           ? const Value.absent()
           : Value(figmaLink),
+      taskType: Value(taskType),
+      recurrencePattern: recurrencePattern == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrencePattern),
+      nextOccurrence: nextOccurrence == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextOccurrence),
     );
   }
 
@@ -1015,6 +1080,10 @@ class Task extends DataClass implements Insertable<Task> {
       milestonesJson: serializer.fromJson<String>(json['milestonesJson']),
       githubLink: serializer.fromJson<String?>(json['githubLink']),
       figmaLink: serializer.fromJson<String?>(json['figmaLink']),
+      taskType: serializer.fromJson<String>(json['taskType']),
+      recurrencePattern:
+          serializer.fromJson<String?>(json['recurrencePattern']),
+      nextOccurrence: serializer.fromJson<DateTime?>(json['nextOccurrence']),
     );
   }
   @override
@@ -1033,6 +1102,9 @@ class Task extends DataClass implements Insertable<Task> {
       'milestonesJson': serializer.toJson<String>(milestonesJson),
       'githubLink': serializer.toJson<String?>(githubLink),
       'figmaLink': serializer.toJson<String?>(figmaLink),
+      'taskType': serializer.toJson<String>(taskType),
+      'recurrencePattern': serializer.toJson<String?>(recurrencePattern),
+      'nextOccurrence': serializer.toJson<DateTime?>(nextOccurrence),
     };
   }
 
@@ -1048,7 +1120,10 @@ class Task extends DataClass implements Insertable<Task> {
           String? assigneesJson,
           String? milestonesJson,
           Value<String?> githubLink = const Value.absent(),
-          Value<String?> figmaLink = const Value.absent()}) =>
+          Value<String?> figmaLink = const Value.absent(),
+          String? taskType,
+          Value<String?> recurrencePattern = const Value.absent(),
+          Value<DateTime?> nextOccurrence = const Value.absent()}) =>
       Task(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1063,6 +1138,12 @@ class Task extends DataClass implements Insertable<Task> {
         milestonesJson: milestonesJson ?? this.milestonesJson,
         githubLink: githubLink.present ? githubLink.value : this.githubLink,
         figmaLink: figmaLink.present ? figmaLink.value : this.figmaLink,
+        taskType: taskType ?? this.taskType,
+        recurrencePattern: recurrencePattern.present
+            ? recurrencePattern.value
+            : this.recurrencePattern,
+        nextOccurrence:
+            nextOccurrence.present ? nextOccurrence.value : this.nextOccurrence,
       );
   Task copyWithCompanion(TasksCompanion data) {
     return Task(
@@ -1085,6 +1166,13 @@ class Task extends DataClass implements Insertable<Task> {
       githubLink:
           data.githubLink.present ? data.githubLink.value : this.githubLink,
       figmaLink: data.figmaLink.present ? data.figmaLink.value : this.figmaLink,
+      taskType: data.taskType.present ? data.taskType.value : this.taskType,
+      recurrencePattern: data.recurrencePattern.present
+          ? data.recurrencePattern.value
+          : this.recurrencePattern,
+      nextOccurrence: data.nextOccurrence.present
+          ? data.nextOccurrence.value
+          : this.nextOccurrence,
     );
   }
 
@@ -1102,7 +1190,10 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('assigneesJson: $assigneesJson, ')
           ..write('milestonesJson: $milestonesJson, ')
           ..write('githubLink: $githubLink, ')
-          ..write('figmaLink: $figmaLink')
+          ..write('figmaLink: $figmaLink, ')
+          ..write('taskType: $taskType, ')
+          ..write('recurrencePattern: $recurrencePattern, ')
+          ..write('nextOccurrence: $nextOccurrence')
           ..write(')'))
         .toString();
   }
@@ -1120,7 +1211,10 @@ class Task extends DataClass implements Insertable<Task> {
       assigneesJson,
       milestonesJson,
       githubLink,
-      figmaLink);
+      figmaLink,
+      taskType,
+      recurrencePattern,
+      nextOccurrence);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1136,7 +1230,10 @@ class Task extends DataClass implements Insertable<Task> {
           other.assigneesJson == this.assigneesJson &&
           other.milestonesJson == this.milestonesJson &&
           other.githubLink == this.githubLink &&
-          other.figmaLink == this.figmaLink);
+          other.figmaLink == this.figmaLink &&
+          other.taskType == this.taskType &&
+          other.recurrencePattern == this.recurrencePattern &&
+          other.nextOccurrence == this.nextOccurrence);
 }
 
 class TasksCompanion extends UpdateCompanion<Task> {
@@ -1152,6 +1249,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String> milestonesJson;
   final Value<String?> githubLink;
   final Value<String?> figmaLink;
+  final Value<String> taskType;
+  final Value<String?> recurrencePattern;
+  final Value<DateTime?> nextOccurrence;
   final Value<int> rowid;
   const TasksCompanion({
     this.id = const Value.absent(),
@@ -1166,6 +1266,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.milestonesJson = const Value.absent(),
     this.githubLink = const Value.absent(),
     this.figmaLink = const Value.absent(),
+    this.taskType = const Value.absent(),
+    this.recurrencePattern = const Value.absent(),
+    this.nextOccurrence = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TasksCompanion.insert({
@@ -1181,6 +1284,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.milestonesJson = const Value.absent(),
     this.githubLink = const Value.absent(),
     this.figmaLink = const Value.absent(),
+    this.taskType = const Value.absent(),
+    this.recurrencePattern = const Value.absent(),
+    this.nextOccurrence = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1202,6 +1308,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<String>? milestonesJson,
     Expression<String>? githubLink,
     Expression<String>? figmaLink,
+    Expression<String>? taskType,
+    Expression<String>? recurrencePattern,
+    Expression<DateTime>? nextOccurrence,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1217,6 +1326,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (milestonesJson != null) 'milestones_json': milestonesJson,
       if (githubLink != null) 'github_link': githubLink,
       if (figmaLink != null) 'figma_link': figmaLink,
+      if (taskType != null) 'task_type': taskType,
+      if (recurrencePattern != null) 'recurrence_pattern': recurrencePattern,
+      if (nextOccurrence != null) 'next_occurrence': nextOccurrence,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1234,6 +1346,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
       Value<String>? milestonesJson,
       Value<String?>? githubLink,
       Value<String?>? figmaLink,
+      Value<String>? taskType,
+      Value<String?>? recurrencePattern,
+      Value<DateTime?>? nextOccurrence,
       Value<int>? rowid}) {
     return TasksCompanion(
       id: id ?? this.id,
@@ -1248,6 +1363,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
       milestonesJson: milestonesJson ?? this.milestonesJson,
       githubLink: githubLink ?? this.githubLink,
       figmaLink: figmaLink ?? this.figmaLink,
+      taskType: taskType ?? this.taskType,
+      recurrencePattern: recurrencePattern ?? this.recurrencePattern,
+      nextOccurrence: nextOccurrence ?? this.nextOccurrence,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1291,6 +1409,15 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (figmaLink.present) {
       map['figma_link'] = Variable<String>(figmaLink.value);
     }
+    if (taskType.present) {
+      map['task_type'] = Variable<String>(taskType.value);
+    }
+    if (recurrencePattern.present) {
+      map['recurrence_pattern'] = Variable<String>(recurrencePattern.value);
+    }
+    if (nextOccurrence.present) {
+      map['next_occurrence'] = Variable<DateTime>(nextOccurrence.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1312,6 +1439,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('milestonesJson: $milestonesJson, ')
           ..write('githubLink: $githubLink, ')
           ..write('figmaLink: $figmaLink, ')
+          ..write('taskType: $taskType, ')
+          ..write('recurrencePattern: $recurrencePattern, ')
+          ..write('nextOccurrence: $nextOccurrence, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4285,6 +4415,9 @@ typedef $$TasksTableCreateCompanionBuilder = TasksCompanion Function({
   Value<String> milestonesJson,
   Value<String?> githubLink,
   Value<String?> figmaLink,
+  Value<String> taskType,
+  Value<String?> recurrencePattern,
+  Value<DateTime?> nextOccurrence,
   Value<int> rowid,
 });
 typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
@@ -4300,6 +4433,9 @@ typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
   Value<String> milestonesJson,
   Value<String?> githubLink,
   Value<String?> figmaLink,
+  Value<String> taskType,
+  Value<String?> recurrencePattern,
+  Value<DateTime?> nextOccurrence,
   Value<int> rowid,
 });
 
@@ -4393,6 +4529,17 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<String> get figmaLink => $composableBuilder(
       column: $table.figmaLink, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get taskType => $composableBuilder(
+      column: $table.taskType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get recurrencePattern => $composableBuilder(
+      column: $table.recurrencePattern,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get nextOccurrence => $composableBuilder(
+      column: $table.nextOccurrence,
+      builder: (column) => ColumnFilters(column));
 
   $$ProjectsTableFilterComposer get projectId {
     final $$ProjectsTableFilterComposer composer = $composerBuilder(
@@ -4502,6 +4649,17 @@ class $$TasksTableOrderingComposer
   ColumnOrderings<String> get figmaLink => $composableBuilder(
       column: $table.figmaLink, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get taskType => $composableBuilder(
+      column: $table.taskType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get recurrencePattern => $composableBuilder(
+      column: $table.recurrencePattern,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get nextOccurrence => $composableBuilder(
+      column: $table.nextOccurrence,
+      builder: (column) => ColumnOrderings(column));
+
   $$ProjectsTableOrderingComposer get projectId {
     final $$ProjectsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -4564,6 +4722,15 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<String> get figmaLink =>
       $composableBuilder(column: $table.figmaLink, builder: (column) => column);
+
+  GeneratedColumn<String> get taskType =>
+      $composableBuilder(column: $table.taskType, builder: (column) => column);
+
+  GeneratedColumn<String> get recurrencePattern => $composableBuilder(
+      column: $table.recurrencePattern, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get nextOccurrence => $composableBuilder(
+      column: $table.nextOccurrence, builder: (column) => column);
 
   $$ProjectsTableAnnotationComposer get projectId {
     final $$ProjectsTableAnnotationComposer composer = $composerBuilder(
@@ -4664,6 +4831,9 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<String> milestonesJson = const Value.absent(),
             Value<String?> githubLink = const Value.absent(),
             Value<String?> figmaLink = const Value.absent(),
+            Value<String> taskType = const Value.absent(),
+            Value<String?> recurrencePattern = const Value.absent(),
+            Value<DateTime?> nextOccurrence = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               TasksCompanion(
@@ -4679,6 +4849,9 @@ class $$TasksTableTableManager extends RootTableManager<
             milestonesJson: milestonesJson,
             githubLink: githubLink,
             figmaLink: figmaLink,
+            taskType: taskType,
+            recurrencePattern: recurrencePattern,
+            nextOccurrence: nextOccurrence,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -4694,6 +4867,9 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<String> milestonesJson = const Value.absent(),
             Value<String?> githubLink = const Value.absent(),
             Value<String?> figmaLink = const Value.absent(),
+            Value<String> taskType = const Value.absent(),
+            Value<String?> recurrencePattern = const Value.absent(),
+            Value<DateTime?> nextOccurrence = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               TasksCompanion.insert(
@@ -4709,6 +4885,9 @@ class $$TasksTableTableManager extends RootTableManager<
             milestonesJson: milestonesJson,
             githubLink: githubLink,
             figmaLink: figmaLink,
+            taskType: taskType,
+            recurrencePattern: recurrencePattern,
+            nextOccurrence: nextOccurrence,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

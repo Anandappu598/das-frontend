@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:auto_route/auto_route.dart';
-import 'package:project_pm/src/features/admin/admin_user_management_page.dart';
+// import 'package:project_pm/src/features/admin/admin_user_management_page.dart'; // Removed
 import 'package:project_pm/src/features/approvals/approvals_page.dart';
 import 'package:project_pm/src/features/team/team_overview_page.dart';
 import 'package:project_pm/src/features/today/today_page.dart';
@@ -37,7 +37,7 @@ class AppRouter extends _$AppRouter {
           AutoRoute(path: 'projects/settings', page: ProjectSettingsRoute.page),
           AutoRoute(path: 'reports', page: ReportsRoute.page),
           AutoRoute(path: 'settings', page: SettingsRoute.page),
-          AutoRoute(path: 'admin', page: AdminUserManagementRoute.page),
+// AutoRoute(path: 'admin', page: AdminUserManagementRoute.page), // Removed
           AutoRoute(path: 'approvals', page: ApprovalsRoute.page),
           AutoRoute(path: 'team', page: TeamOverviewRoute.page),
         ]),

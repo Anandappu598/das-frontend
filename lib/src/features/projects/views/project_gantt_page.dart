@@ -4,6 +4,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/features/projects/widgets/gantt_chart_painter.dart';
+import 'package:project_pm/src/core/providers/user_providers.dart';
+import 'package:project_pm/src/features/projects/modals/add_item_modal.dart';
 
 @RoutePage()
 class ProjectGanttPage extends HookConsumerWidget {
@@ -19,8 +21,8 @@ class ProjectGanttPage extends HookConsumerWidget {
           return const Scaffold(body: Center(child: Text("Project not found")));
         }
         if (data.tasks.isEmpty) {
-          return const Scaffold(
-              body: Center(child: Text("No tasks in this project yet.")));
+          // Even if empty, show the structure so user can add item
+          return _GanttChartView(project: data);
         }
         return _GanttChartView(project: data);
       },
@@ -31,30 +33,50 @@ class ProjectGanttPage extends HookConsumerWidget {
   }
 }
 
-class _GanttChartView extends StatefulWidget {
+class _GanttChartView extends ConsumerStatefulWidget {
   final ProjectWithTasks project;
   const _GanttChartView({required this.project});
 
   @override
-  State<_GanttChartView> createState() => _GanttChartViewState();
+  ConsumerState<_GanttChartView> createState() => _GanttChartViewState();
 }
 
-class _GanttChartViewState extends State<_GanttChartView> {
-  double dayWidth = 50.0;
+class _GanttChartViewState extends ConsumerState<_GanttChartView> {
+  final double dayWidth = 50.0; // Fixed width as per request
+
+  void _showAddItemModal(BuildContext context, String projectId) {
+    showDialog(
+      context: context,
+      builder: (context) =>
+          AddItemModal(projectId: projectId), // Use custom modal
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     // 1. Calculate Timeline Range
     final tasks = widget.project.tasks.map((t) => t).toList();
-    if (tasks.isEmpty) return const SizedBox();
+    // if (tasks.isEmpty) return const SizedBox(); // Allow empty to show "Add Item"
 
-    tasks.sort((a, b) => a.task.startDate.compareTo(b.task.startDate));
+    DateTime projectStart;
+    DateTime projectEnd;
 
-    final projectStart = tasks.first.task.startDate;
-    final projectEnd = tasks
-        .fold(tasks.first.task.endDate,
-            (prev, t) => t.task.endDate.isAfter(prev) ? t.task.endDate : prev)
-        .add(const Duration(days: 2));
+    if (tasks.isEmpty) {
+      projectStart = DateTime.now();
+      projectEnd = DateTime.now().add(const Duration(days: 14));
+    } else {
+      tasks.sort((a, b) => a.task.startDate.compareTo(b.task.startDate));
+      projectStart = tasks.first.task.startDate;
+      projectEnd = tasks
+          .fold(tasks.first.task.endDate,
+              (prev, t) => t.task.endDate.isAfter(prev) ? t.task.endDate : prev)
+          .add(const Duration(days: 2));
+    }
+
+    // Ensure minimal range
+    if (projectEnd.difference(projectStart).inDays < 7) {
+      projectEnd = projectStart.add(const Duration(days: 7));
+    }
 
     final totalDays = projectEnd.difference(projectStart).inDays + 1;
 
@@ -62,37 +84,22 @@ class _GanttChartViewState extends State<_GanttChartView> {
     const double headerHeight = 50.0;
     const double taskNameWidth = 200.0;
 
-    final totalHeight = headerHeight + (tasks.length * rowHeight);
+    // Minimum height to fill screen roughly
+    final minContentHeight = MediaQuery.of(context).size.height * 0.7;
+    final calculatedHeight = headerHeight +
+        (tasks.length * rowHeight) +
+        100; // +100 for button space
+    final totalHeight = calculatedHeight < minContentHeight
+        ? minContentHeight
+        : calculatedHeight;
+
     final totalWidth = taskNameWidth + (totalDays * dayWidth);
 
     return Scaffold(
       body: Column(
         children: [
-          // Toolbar
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const Text("Zoom: ",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(width: 8),
-                SegmentedButton<double>(
-                  segments: const [
-                    ButtonSegment(value: 30.0, label: Text("Compact")),
-                    ButtonSegment(value: 50.0, label: Text("Day")),
-                    ButtonSegment(value: 100.0, label: Text("Wide")),
-                  ],
-                  selected: {dayWidth},
-                  onSelectionChanged: (Set<double> newSelection) {
-                    setState(() {
-                      dayWidth = newSelection.first;
-                    });
-                  },
-                )
-              ],
-            ),
-          ),
+          // Toolbar Removed as requested
+
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,29 +154,53 @@ class _GanttChartViewState extends State<_GanttChartView> {
                                         15 -
                                         (assigneeIdx * 10),
                                     top: y + (rowHeight - 24) / 2,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                            color: Colors.white, width: 2),
-                                        boxShadow: [
-                                          BoxShadow(
-                                              color:
-                                                  Colors.black.withOpacity(0.1),
-                                              blurRadius: 4)
-                                        ],
-                                      ),
-                                      child: CircleAvatar(
-                                        radius: 12,
-                                        backgroundImage: a.avatarUrl.isNotEmpty
-                                            ? NetworkImage(a.avatarUrl)
-                                            : null,
-                                        backgroundColor: Colors.blue.shade100,
-                                        child: a.avatarUrl.isEmpty
-                                            ? Text(a.name[0],
-                                                style: const TextStyle(
-                                                    fontSize: 10))
-                                            : null,
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () {
+                                          // Impersonate / View Dashboard Logic
+                                          final currentId =
+                                              ref.read(currentUserIdProvider);
+                                          ref
+                                              .read(
+                                                  impersonatingFromUserIdProvider
+                                                      .notifier)
+                                              .state = currentId;
+                                          ref
+                                              .read(currentUserIdProvider
+                                                  .notifier)
+                                              .state = a.id;
+                                          context.router
+                                              .navigateNamed('/app/dashboard');
+                                        },
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                                color: Colors.white, width: 2),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.1),
+                                                  blurRadius: 4)
+                                            ],
+                                          ),
+                                          child: CircleAvatar(
+                                            radius: 12,
+                                            backgroundImage:
+                                                a.avatarUrl.isNotEmpty
+                                                    ? NetworkImage(a.avatarUrl)
+                                                    : null,
+                                            backgroundColor:
+                                                Colors.blue.shade100,
+                                            child: a.avatarUrl.isEmpty
+                                                ? Text(a.name[0],
+                                                    style: const TextStyle(
+                                                        fontSize: 10))
+                                                : null,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   );
@@ -183,11 +214,8 @@ class _GanttChartViewState extends State<_GanttChartView> {
                           padding: const EdgeInsets.only(
                               left: 16.0, top: 12.0, bottom: 24.0),
                           child: InkWell(
-                            onTap: () {
-                              // ScaffoldMessenger.of(context).showSnackBar(
-                              //     const SnackBar(content: Text("Add Item clicked")));
-                              // Logic to add item would go here
-                            },
+                            onTap: () => _showAddItemModal(
+                                context, widget.project.project.id),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [

@@ -6,17 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:project_pm/src/shared/providers/sidebar_providers.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
 
-// Stub for User model, replace with actual import when available
-class UserStub {
-  final String name;
-  final String avatarUrl;
-  final UserRole role;
-
-  UserStub({required this.name, required this.avatarUrl, required this.role});
-}
+import 'package:project_pm/src/core/database/database.dart';
 
 class Sidebar extends HookConsumerWidget {
-  final UserStub currentUser;
+  final User currentUser;
   final ViewMode viewMode;
   final Function(ViewMode) onViewModeChange;
   final bool isProjectSelected;
@@ -37,6 +30,9 @@ class Sidebar extends HookConsumerWidget {
     // Use the provider state directly instead of LayoutBuilder constraints
     // This avoids rebuilding the entire tree every frame during animation
     final isEffectivelyExpanded = !isCollapsed;
+
+    // Parse role from string to enum for logic
+    final userRole = UserRole.fromString(currentUser.role);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -262,9 +258,9 @@ class Sidebar extends HookConsumerWidget {
 
                 // Only show Management and General if NO project is selected
                 if (!isProjectSelected) ...[
-                  if (currentUser.role.isAdmin ||
-                      currentUser.role.isManager ||
-                      currentUser.role.isTeamLead) ...[
+                  if (userRole.isAdmin ||
+                      userRole.isManager ||
+                      userRole.isTeamLead) ...[
                     buildSectionTitle(isEffectivelyExpanded, borderColor,
                         sectionColor, "Management"),
                     buildNavItem(
@@ -280,24 +276,10 @@ class Sidebar extends HookConsumerWidget {
                         FontAwesomeIcons.circleCheck,
                         ViewMode.approvals.label,
                         badge: pendingApprovalsCount),
-                    if (currentUser.role.isAdmin)
-                      buildNavItem(
-                          context,
-                          isEffectivelyExpanded,
-                          ViewMode.adminPanel,
-                          FontAwesomeIcons.shieldHalved,
-                          ViewMode.adminPanel.label),
+                    if (userRole.isAdmin)
+                      // Admin Panel removed
+                      const SizedBox.shrink(),
                   ],
-                  buildSectionTitle(isEffectivelyExpanded, borderColor,
-                      sectionColor, "General"),
-                  buildNavItem(context, isEffectivelyExpanded, ViewMode.reports,
-                      FontAwesomeIcons.chartSimple, ViewMode.reports.label),
-                  buildNavItem(
-                      context,
-                      isEffectivelyExpanded,
-                      ViewMode.settings,
-                      FontAwesomeIcons.sliders,
-                      ViewMode.settings.label),
                 ],
               ],
             ),
@@ -338,7 +320,7 @@ class Sidebar extends HookConsumerWidget {
                           softWrap: false,
                         ),
                         Text(
-                          currentUser.role.label,
+                          userRole.label,
                           style: TextStyle(
                             color: mutedColor,
                             fontSize: 10,

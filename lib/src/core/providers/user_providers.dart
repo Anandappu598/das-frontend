@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:project_pm/src/core/database/database.dart';
 import 'package:project_pm/src/core/database/database_provider.dart';
+// import 'package:project_pm/src/core/constants/enums.dart'; // Unused now
 
 /// Current user ID - can be changed via user switcher
 final currentUserIdProvider = StateProvider<String>((ref) => 'u1');
@@ -193,41 +194,4 @@ final visibleTeamMembersProvider = Provider<List<User>>((ref) {
   );
 });
 
-/// User role enum with helper extensions
-enum UserRole {
-  admin,
-  manager,
-  teamLead,
-  employee;
-
-  bool get isAdmin => this == UserRole.admin;
-  bool get isManager => this == UserRole.manager;
-  bool get isTeamLead => this == UserRole.teamLead;
-  bool get isEmployee => this == UserRole.employee;
-
-  String get label {
-    switch (this) {
-      case UserRole.admin:
-        return 'Admin';
-      case UserRole.manager:
-        return 'Manager';
-      case UserRole.teamLead:
-        return 'Team Lead';
-      case UserRole.employee:
-        return 'Employee';
-    }
-  }
-
-  static UserRole fromString(String role) {
-    switch (role.toUpperCase()) {
-      case 'ADMIN':
-        return UserRole.admin;
-      case 'MANAGER':
-        return UserRole.manager;
-      case 'TEAM_LEAD':
-        return UserRole.teamLead;
-      default:
-        return UserRole.employee;
-    }
-  }
-}
+// UserRole enum is now in src/core/constants/enums.dart

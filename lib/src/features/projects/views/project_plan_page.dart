@@ -198,9 +198,10 @@ class _ProjectPlanView extends HookConsumerWidget {
       // ignore
     }
 
-    final isComplete = task.progress >= 100;
-    // Use green for complete/high progress, blue for others
-    final progressColor = isComplete ? const Color(0xFF22C55E) : Colors.blue;
+    // Plan: Green for progress (always), Blue for checks
+    // We use a nice Green for the bar, and Blue for the checkboxes
+    final progressBarColor = const Color(0xFF22C55E);
+    final checkboxColor = Colors.blue;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
@@ -271,7 +272,7 @@ class _ProjectPlanView extends HookConsumerWidget {
                     minHeight: 8,
                     backgroundColor:
                         isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                    color: progressColor,
+                    color: progressBarColor,
                   ),
                 ),
               ],
@@ -304,7 +305,7 @@ class _ProjectPlanView extends HookConsumerWidget {
                             height: 24,
                             child: Checkbox(
                               value: m.completed,
-                              activeColor: progressColor,
+                              activeColor: checkboxColor,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(4)),
                               onChanged: (val) {
