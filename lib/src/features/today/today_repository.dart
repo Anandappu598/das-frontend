@@ -23,13 +23,14 @@ class TodayRepository {
 
   TodayRepository(this._db);
 
-  Stream<DailyLogWithDetails?> watchDailyLog(DateTime date) {
+  Stream<DailyLogWithDetails?> watchDailyLog(DateTime date, String userId) {
     final db = _db!;
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
     final query = db.select(db.dailyLogs)
       ..where((tbl) =>
+          tbl.userId.equals(userId) &
           tbl.date.isBiggerOrEqualValue(startOfDay) &
           tbl.date.isSmallerThanValue(endOfDay));
 
@@ -58,7 +59,7 @@ class TodayRepository {
   /// Watch all planned items for a given date range (inclusive start, exclusive end)
   /// Returns a Map<DateTime, List<PlannedItem>> keyed by the day
   Stream<Map<DateTime, List<PlannedItem>>> watchPlannedItemsForRange(
-      DateTime start, DateTime end) {
+      DateTime start, DateTime end, String userId) {
     final db = _db!;
 
     // We need to join DailyLogs with PlannedItems
@@ -66,7 +67,8 @@ class TodayRepository {
       innerJoin(db.plannedItems,
           db.plannedItems.dailyLogId.equalsExp(db.dailyLogs.id))
     ])
-      ..where(db.dailyLogs.date.isBiggerOrEqualValue(start) &
+      ..where(db.dailyLogs.userId.equals(userId) &
+          db.dailyLogs.date.isBiggerOrEqualValue(start) &
           db.dailyLogs.date.isSmallerThanValue(end));
 
     return query.watch().map((rows) {
@@ -95,6 +97,7 @@ class TodayRepository {
 
     final existing = await (db.select(db.dailyLogs)
           ..where((tbl) =>
+              tbl.userId.equals(userId) &
               tbl.date.isBiggerOrEqualValue(startOfDay) &
               tbl.date.isSmallerThanValue(endOfDay)))
         .getSingleOrNull();
@@ -251,12 +254,12 @@ class MockTodayRepository implements TodayRepository {
   AppDatabase? get _db => null;
 
   @override
-  Stream<DailyLogWithDetails?> watchDailyLog(DateTime date) =>
+  Stream<DailyLogWithDetails?> watchDailyLog(DateTime date, String userId) =>
       _logSubject.stream;
 
   @override
   Stream<Map<DateTime, List<PlannedItem>>> watchPlannedItemsForRange(
-      DateTime start, DateTime end) {
+      DateTime start, DateTime end, String userId) {
     return _logSubject.stream.map((details) {
       if (details == null) return {};
       // For mock, we only have one log. If it's in range, return it.

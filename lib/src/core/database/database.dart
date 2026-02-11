@@ -40,6 +40,9 @@ class Tasks extends Table {
   TextColumn get milestonesJson => text().withDefault(const Constant('[]'))();
   TextColumn get githubLink => text().nullable()();
   TextColumn get figmaLink => text().nullable()();
+  TextColumn get taskType => text().withDefault(const Constant('standard'))();
+  TextColumn get recurrencePattern => text().nullable()();
+  DateTimeColumn get nextOccurrence => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -142,7 +145,7 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   int get schemaVersion =>
-      8; // Bumped version to 8 for PlannedItems.isCompleted
+      9; // Bumped version to 9 for taskType, recurrencePattern, nextOccurrence
 
   @override
   MigrationStrategy get migration {
@@ -175,6 +178,11 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 8) {
           await m.addColumn(plannedItems, plannedItems.isCompleted);
+        }
+        if (from < 9) {
+          await m.addColumn(tasks, tasks.taskType);
+          await m.addColumn(tasks, tasks.recurrencePattern);
+          await m.addColumn(tasks, tasks.nextOccurrence);
         }
       },
     );

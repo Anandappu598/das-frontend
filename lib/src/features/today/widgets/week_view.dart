@@ -7,6 +7,7 @@ import 'package:project_pm/src/features/today/today_repository.dart';
 import 'package:project_pm/src/core/database/database.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
+import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/features/today/widgets/task_config_modal.dart';
 
 class WeekView extends HookConsumerWidget {
@@ -264,9 +265,11 @@ class WeekView extends HookConsumerWidget {
                                                 );
                                                 final repo = ref.read(
                                                     todayRepositoryProvider);
+                                                final userId = ref.read(
+                                                    currentUserIdProvider);
                                                 final logId = await repo
                                                     .ensureDailyLogExists(
-                                                        dayDate, 'u1');
+                                                        dayDate, userId);
                                                 await repo.addPlannedItem(
                                                   logId,
                                                   PlannedItemsCompanion(
@@ -294,41 +297,63 @@ class WeekView extends HookConsumerWidget {
                                               true,
                                           onAcceptWithDetails: (details) async {
                                             final data = details.data;
-                                            final duration =
-                                                data['duration'] as int? ?? 60;
-                                            final name = data['name'] as String;
-                                            const description =
-                                                ''; // Default empty
+                                            showDialog(
+                                              context: context,
+                                              builder: (ctx) => TaskConfigModal(
+                                                taskObject:
+                                                    data['taskObject'] as Task?,
+                                                projectObject:
+                                                    data['projectObject']
+                                                        as Project?,
+                                                initialTitle:
+                                                    data['name'] as String?,
+                                                initialDescription:
+                                                    data['description']
+                                                        as String?,
+                                                initialDuration:
+                                                    data['duration'] as int?,
+                                                onConfirm: ({
+                                                  required String name,
+                                                  required int duration,
+                                                  String? description,
+                                                  List<String>?
+                                                      selectedMilestoneIds,
+                                                }) async {
+                                                  final dropTime = DateTime(
+                                                      dayDate.year,
+                                                      dayDate.month,
+                                                      dayDate.day,
+                                                      hour,
+                                                      0);
 
-                                            // Calculate drop time
-                                            final dropTime = DateTime(
-                                                dayDate.year,
-                                                dayDate.month,
-                                                dayDate.day,
-                                                hour,
-                                                0);
+                                                  final repo = ref.read(
+                                                      todayRepositoryProvider);
+                                                  final userId = ref.read(
+                                                      currentUserIdProvider);
+                                                  final logId = await repo
+                                                      .ensureDailyLogExists(
+                                                          dayDate, userId);
 
-                                            final repo = ref
-                                                .read(todayRepositoryProvider);
-                                            final logId =
-                                                await repo.ensureDailyLogExists(
-                                                    dayDate, 'u1');
-
-                                            await repo.addPlannedItem(
-                                              logId,
-                                              PlannedItemsCompanion(
-                                                id: drift.Value(
-                                                    const Uuid().v4()),
-                                                dailyLogId: drift.Value(logId),
-                                                name: drift.Value(name),
-                                                description: const drift.Value(
-                                                    description),
-                                                durationMinutes:
-                                                    drift.Value(duration),
-                                                startTime:
-                                                    drift.Value(dropTime),
-                                                quadrant: const drift.Value(
-                                                    'q2'), // Default
+                                                  await repo.addPlannedItem(
+                                                    logId,
+                                                    PlannedItemsCompanion(
+                                                      id: drift.Value(
+                                                          const Uuid().v4()),
+                                                      dailyLogId:
+                                                          drift.Value(logId),
+                                                      name: drift.Value(name),
+                                                      description: drift.Value(
+                                                          description ?? ''),
+                                                      durationMinutes:
+                                                          drift.Value(duration),
+                                                      startTime:
+                                                          drift.Value(dropTime),
+                                                      quadrant:
+                                                          const drift.Value(
+                                                              'q2'),
+                                                    ),
+                                                  );
+                                                },
                                               ),
                                             );
                                           },

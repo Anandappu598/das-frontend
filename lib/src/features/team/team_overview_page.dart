@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/core/database/database.dart';
-import 'package:project_pm/src/core/providers/user_providers.dart'
-    hide UserRole;
+import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/routes/app_router.dart';
 
 @RoutePage()

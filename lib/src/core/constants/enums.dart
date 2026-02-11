@@ -4,14 +4,9 @@ enum ViewMode {
   gantt,
   grid,
   plan,
-  context,
-  adminPanel,
+// adminPanel, // Removed
   teamOverview,
-  approvals,
-  reports,
-  settings,
-  projectReports,
-  projectSettings;
+  approvals;
 
   String get label {
     switch (this) {
@@ -25,22 +20,11 @@ enum ViewMode {
         return 'Grid View';
       case ViewMode.plan:
         return 'Tasks & Plan';
-      case ViewMode.context:
-        return 'Context / SRS';
-      case ViewMode.adminPanel:
-        return 'Admin Panel';
+// adminPanel, // Removed
       case ViewMode.teamOverview:
         return 'Team Overview';
       case ViewMode.approvals:
         return 'Approvals';
-      case ViewMode.reports:
-        return 'Reports';
-      case ViewMode.settings:
-        return 'Settings';
-      case ViewMode.projectReports:
-        return 'Reports';
-      case ViewMode.projectSettings:
-        return 'Project Settings';
     }
   }
 }

@@ -43,6 +43,7 @@ Future<List<ProjectWithTasks>> dashboardProjects(
               approvalStatus: null,
               githubLink: null,
               figmaLink: null,
+              taskType: 'standard',
             ),
             assignees: [], // Single user (implicit "My Project")
           ),
@@ -71,6 +72,7 @@ Future<List<ProjectWithTasks>> dashboardProjects(
               approvalStatus: null,
               githubLink: null,
               figmaLink: null,
+              taskType: 'standard',
             ),
             assignees: [
               // Multiple assignees make this a "Team Project"
@@ -119,6 +121,7 @@ Future<List<ProjectWithTasks>> dashboardProjects(
               approvalStatus: null,
               githubLink: null,
               figmaLink: null,
+              taskType: 'standard',
             ),
             assignees: [
               const User(
