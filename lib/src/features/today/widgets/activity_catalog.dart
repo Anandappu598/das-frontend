@@ -496,72 +496,67 @@ class _ProjectTaskCard extends ConsumerWidget {
       'projectObject': project.project,
     };
 
-    return Draggable<Map<String, dynamic>>(
+    return LongPressDraggable<Map<String, dynamic>>(
       data: dragData,
       dragAnchorStrategy: pointerDragAnchorStrategy,
+      delay: const Duration(milliseconds: 300),
       feedback: Material(
-        elevation: 6,
-        shadowColor: Colors.black45,
+        elevation: 12,
         borderRadius: BorderRadius.circular(12),
         color: Colors.transparent,
         child: Container(
-          width: 240,
-          padding: const EdgeInsets.all(12),
+          width: 260,
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark
-                ? const Color(0xFF1F2937).withValues(alpha: 0.95)
-                : Colors.white.withValues(alpha: 0.95),
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: Colors.blue.withValues(alpha: 0.5), width: 1.5),
+              color: Colors.blue.shade600,
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                task.task.name,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: isDark ? Colors.white : Colors.black87,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+              const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.drag_indicator,
-                      size: 14,
-                      color: isDark ? Colors.grey : Colors.grey.shade600),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      task.task.name,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        decoration: TextDecoration.none, // Ensure no underline
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  Icon(Icons.access_time,
+                      size: 12, color: Colors.blue.shade400),
+                  const SizedBox(width: 4),
+                  Text(
+                    "30 min • Drag to planner",
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.blue.shade400,
+                      decoration: TextDecoration.none,
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  project.project.name,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                    decoration: TextDecoration.none,
-                  ),
-                ),
               ),
             ],
           ),
         ),
       ),
       childWhenDragging: Opacity(
-        opacity: 0.5,
+        opacity: 0.4,
         child: Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: _buildCardContent(
@@ -818,27 +813,31 @@ class _SystemTemplateCard extends ConsumerWidget {
       'duration': 30,
     };
 
-    return Draggable<Map<String, dynamic>>(
+    return LongPressDraggable<Map<String, dynamic>>(
       data: dragData,
       dragAnchorStrategy: pointerDragAnchorStrategy,
+      delay: const Duration(milliseconds: 300),
       feedback: Material(
-        elevation: 6,
-        shadowColor: Colors.black45,
+        elevation: 12,
         borderRadius: BorderRadius.circular(10),
         color: Colors.transparent,
         child: Container(
           width: 220,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isDark
-                ? const Color(0xFF374151).withValues(alpha: 0.95)
-                : Colors.white.withValues(alpha: 0.95),
+            color: isDark ? const Color(0xFF1F2937) : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-                color: category == 'Routine'
-                    ? Colors.orange.withValues(alpha: 0.5)
-                    : Colors.purple.withValues(alpha: 0.5),
-                width: 1.5),
+              color: category == 'Routine' ? Colors.orange : Colors.purple,
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -860,7 +859,6 @@ class _SystemTemplateCard extends ConsumerWidget {
                     color: isDark ? Colors.white : Colors.black87,
                     decoration: TextDecoration.none,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -992,7 +990,7 @@ class _CustomTemplateCard extends HookConsumerWidget {
     final categoryIcon = _getCategoryIcon();
     final categoryColor = _getCategoryColor();
 
-    return Draggable<Map<String, dynamic>>(
+    return LongPressDraggable<Map<String, dynamic>>(
       data: {
         'source': 'catalog',
         'type': 'custom_template',
@@ -1001,31 +999,41 @@ class _CustomTemplateCard extends HookConsumerWidget {
         'duration': template.defaultDuration,
         'category': template.category,
       },
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      delay: const Duration(milliseconds: 300),
       feedback: Material(
-        elevation: 4,
+        elevation: 12,
         borderRadius: BorderRadius.circular(10),
         color: Colors.transparent,
-        child: Opacity(
-          opacity: 0.9,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF374151) : Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _getCategoryColor().withValues(alpha: 0.5),
-              ),
+        child: Container(
+          width: 200,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1F2937) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: categoryColor,
+              width: 2,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  categoryIcon,
-                  size: 16,
-                  color: categoryColor,
-                ),
-                const SizedBox(width: 12),
-                Text(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                categoryIcon,
+                size: 16,
+                color: categoryColor,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
                   template.name,
                   style: TextStyle(
                     fontSize: 13,
@@ -1034,8 +1042,8 @@ class _CustomTemplateCard extends HookConsumerWidget {
                     decoration: TextDecoration.none,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

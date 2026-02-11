@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/today/today_providers.dart';
 import 'package:project_pm/src/features/today/today_repository.dart';
+import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/features/today/widgets/day_log.dart';
 import 'package:project_pm/src/features/today/widgets/day_planner.dart';
 import 'package:project_pm/src/features/today/widgets/activity_catalog.dart';
@@ -39,10 +40,11 @@ class _TodayPageState extends ConsumerState<TodayPage> {
       ref.invalidate(todayLogProvider);
 
       // Ensure log exists
+      final userId = ref.read(currentUserIdProvider);
       ref
           .read(todayRepositoryProvider)
-          .ensureDailyLogExists(DateTime.now(), 'user-1')
-          .then((_) => debugPrint('Daily log verified/created.'))
+          .ensureDailyLogExists(DateTime.now(), userId)
+          .then((_) => debugPrint('Daily log verified/created for $userId.'))
           .catchError((e) => debugPrint('Error ensuring daily log: $e'));
     });
   }

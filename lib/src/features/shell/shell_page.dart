@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/core/constants/enums.dart';
 import 'package:project_pm/src/core/database/database.dart';
-import 'package:project_pm/src/core/providers/user_providers.dart'
-    hide UserRole;
+import 'package:project_pm/src/core/providers/user_providers.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/routes/app_router.dart';
 import 'package:project_pm/src/shared/widgets/header.dart';
@@ -51,19 +50,12 @@ class ShellPage extends ConsumerWidget {
           );
         }
 
-        // Convert DB user to UserStub for sidebar
-        final userStub = UserStub(
-          name: currentUser.name,
-          avatarUrl: currentUser.avatarUrl,
-          role: UserRole.fromString(currentUser.role),
-        );
-
         final screenWidth = MediaQuery.of(context).size.width;
         final isMobile = screenWidth < 768;
 
         // Sidebar widget reused for both desktop sidebar and mobile drawer
         Widget sidebarWidget() => Sidebar(
-              currentUser: userStub,
+              currentUser: currentUser,
               viewMode: currentViewMode,
               isProjectSelected: isProjectSelected,
               onViewModeChange: (mode) {
@@ -189,24 +181,9 @@ class ShellPage extends ConsumerWidget {
       case ViewMode.grid:
         router.navigate(const ProjectGridRoute());
         break;
-      case ViewMode.context:
-        router.navigate(const ProjectContextRoute());
-        break;
-      case ViewMode.projectReports:
-        router.navigate(const ProjectReportsRoute());
-        break;
-      case ViewMode.projectSettings:
-        router.navigate(const ProjectSettingsRoute());
-        break;
-      case ViewMode.reports:
-        router.navigate(const ReportsRoute());
-        break;
-      case ViewMode.settings:
-        router.navigate(const SettingsRoute());
-        break;
-      case ViewMode.adminPanel:
-        router.navigate(const AdminUserManagementRoute());
-        break;
+// case ViewMode.adminPanel:
+//   router.navigate(const AdminUserManagementRoute());
+//   break;
       case ViewMode.approvals:
         router.navigate(const ApprovalsRoute());
         break;
@@ -230,23 +207,12 @@ class ShellPage extends ConsumerWidget {
       return ViewMode.gantt;
     } else if (path.contains('/projects/grid')) {
       return ViewMode.grid;
-    } else if (path.contains('/projects/context')) {
-      return ViewMode.context;
-    } else if (path.contains('/projects/reports')) {
-      return ViewMode.projectReports;
-    } else if (path.contains('/projects/settings')) {
-      return ViewMode.projectSettings;
-    } else if (path.contains('/reports')) {
-      // Check longer paths first? reports is top level under app
-      return ViewMode.reports;
-    } else if (path.contains('/settings')) {
-      return ViewMode.settings;
-    } else if (path.contains('/admin')) {
-      return ViewMode.adminPanel;
-    } else if (path.contains('/approvals')) {
-      return ViewMode.approvals;
     } else if (path.contains('/team')) {
       return ViewMode.teamOverview;
+    } else if (path.contains('/approvals')) {
+      return ViewMode.approvals;
+// } else if (path.contains('/admin')) {
+//   return ViewMode.dashboard; // Redirect to dashboard instead of admin
     } else if (path.contains('/projects')) {
       // Fallback for any other projects path
       return ViewMode.grid;
@@ -275,24 +241,9 @@ class ShellPage extends ConsumerWidget {
       case ViewMode.gantt:
         subtitle = "Visual timeline of your project.";
         break;
-      case ViewMode.context:
-        subtitle = "SRS and documentation.";
-        break;
-      case ViewMode.projectReports:
-        subtitle = "Analytics for this project.";
-        break;
-      case ViewMode.projectSettings:
-        subtitle = "Configure project details.";
-        break;
-      case ViewMode.reports:
-        subtitle = "Global analytics and reports.";
-        break;
-      case ViewMode.settings:
-        subtitle = "App configuration.";
-        break;
-      case ViewMode.adminPanel:
-        subtitle = "Manage users and permissions.";
-        break;
+// case ViewMode.adminPanel:
+//   subtitle = "Manage users and permissions.";
+//   break;
       case ViewMode.approvals:
         subtitle = "Review and approve requests.";
         break;

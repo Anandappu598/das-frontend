@@ -15,12 +15,6 @@ abstract class _$AppRouter extends RootStackRouter {
 
   @override
   final Map<String, PageFactory> pagesMap = {
-    AdminUserManagementRoute.name: (routeData) {
-      return AutoRoutePage<dynamic>(
-        routeData: routeData,
-        child: const AdminUserManagementPage(),
-      );
-    },
     ApprovalsRoute.name: (routeData) {
       return AutoRoutePage<dynamic>(
         routeData: routeData,
@@ -154,20 +148,6 @@ abstract class _$AppRouter extends RootStackRouter {
       );
     },
   };
-}
-
-/// generated route for
-/// [AdminUserManagementPage]
-class AdminUserManagementRoute extends PageRouteInfo<void> {
-  const AdminUserManagementRoute({List<PageRouteInfo>? children})
-      : super(
-          AdminUserManagementRoute.name,
-          initialChildren: children,
-        );
-
-  static const String name = 'AdminUserManagementRoute';
-
-  static const PageInfo<void> page = PageInfo<void>(name);
 }
 
 /// generated route for

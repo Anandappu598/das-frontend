@@ -461,7 +461,7 @@ class _InboxBox extends ConsumerWidget {
             boxShadow: isHovering
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 8,
                       spreadRadius: 1,
                     )
@@ -522,6 +522,7 @@ class _DraggablePlannedItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // If finalized, we have a "Start" button instead of drag
     if (isFinalized) {
       return Card(
@@ -549,26 +550,41 @@ class _DraggablePlannedItem extends ConsumerWidget {
       );
     }
 
-    return Draggable<String>(
+    return LongPressDraggable<String>(
       data: item.id,
+      delay: const Duration(milliseconds: 300),
       feedback: Material(
-        elevation: 6,
-        shadowColor: Colors.black45,
+        elevation: 12,
         borderRadius: BorderRadius.circular(8),
         color: Colors.transparent,
         child: Container(
           padding: const EdgeInsets.all(12),
-          width: 200,
+          width: 220,
           decoration: BoxDecoration(
-              color: Theme.of(context).cardColor.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.withValues(alpha: 0.3))),
-          child: Text(item.name,
-              style: const TextStyle(fontWeight: FontWeight.w600)),
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue.shade600, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Text(
+            item.name,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: isDark ? Colors.white : Colors.black87,
+              decoration: TextDecoration.none,
+            ),
+          ),
         ),
       ),
       childWhenDragging: Opacity(
-        opacity: 0.5,
+        opacity: 0.4,
         child: _ItemContent(item: item, logId: logId),
       ),
       child: _ItemContent(item: item, logId: logId),
