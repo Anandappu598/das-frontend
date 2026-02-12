@@ -23,7 +23,7 @@ final dashboardRepositoryProvider =
 );
 
 typedef DashboardRepositoryRef = AutoDisposeProviderRef<DashboardRepository>;
-String _$dashboardProjectsHash() => r'a9c1d6f73c63dd29f8d2723451f0dc8089a5e38e';
+String _$dashboardProjectsHash() => r'4282024c0a59dc6819de7319452bacc37bfcbc4d';
 
 /// See also [dashboardProjects].
 @ProviderFor(dashboardProjects)

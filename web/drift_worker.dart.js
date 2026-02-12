@@ -1,6 +1,4 @@
-// Drift worker stub for web - using in-browser mode
-// This file is required by drift_flutter but the actual implementation
-// uses WebAssembly directly in the main thread when this file is minimal
-self.onmessage = function(e) {
-  console.log('Drift worker message received');
-};
+// This file is intentionally a stub.
+// Drift will load its own worker implementation.
+// Just needs to exist for the URI reference.
+self.postMessage({type: 'ready'});

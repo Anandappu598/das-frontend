@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -150,7 +152,7 @@ class _TotalWorkedTimerState extends State<_TotalWorkedTimer> {
   }
 }
 
-class _LoggedItemCard extends ConsumerWidget {
+class _LoggedItemCard extends HookConsumerWidget {
   final LoggedItem item;
   const _LoggedItemCard({required this.item});
 
@@ -158,6 +160,31 @@ class _LoggedItemCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isRunning = item.endTime == null;
     final dateFormat = DateFormat('HH:mm');
+    final remarkController = useTextEditingController();
+    final showRemarkInput = useState(false);
+    
+    // Parse existing remarks from JSON
+    List<String> existingRemarks = [];
+    try {
+      final decoded = jsonDecode(item.remarksJson);
+      if (decoded is List) {
+        existingRemarks = decoded.cast<String>();
+      }
+    } catch (e) {
+      debugPrint('Error parsing remarks: $e');
+    }
+
+    void addRemark() {
+      if (remarkController.text.trim().isEmpty) return;
+      
+      final newRemarks = [...existingRemarks, remarkController.text.trim()];
+      ref.read(todayRepositoryProvider).updateLoggedItemRemarks(
+        item.id,
+        newRemarks,
+      );
+      remarkController.clear();
+      showRemarkInput.value = false;
+    }
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -171,85 +198,183 @@ class _LoggedItemCard extends ConsumerWidget {
                 ? Colors.blue.withValues(alpha: 0.3)
                 : Colors.grey.withValues(alpha: 0.2)),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          // Header row with title and action button
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15)),
-                    const SizedBox(width: 8),
-                    if (item.isUnplanned)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4)),
-                        child: const Text("Unplanned",
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(item.name,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15)),
+                        ),
+                        const SizedBox(width: 8),
+                        if (item.isUnplanned)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4)),
+                            child: const Text("Unplanned",
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold)),
+                          )
+                      ],
+                    ),
+                    if (item.description.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(item.description,
                             style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.orange,
-                                fontWeight: FontWeight.bold)),
-                      )
+                                fontSize: 12, color: Colors.grey.shade600)),
+                      ),
                   ],
                 ),
-                Text(item.description,
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-              ],
-            ),
-          ),
-          if (isRunning)
-            IconButton(
-              onPressed: () async {
-                final repo = ref.read(todayRepositoryProvider);
-                if (item.plannedItemId != null) {
-                  // Show review dialog for planned items
-                  final progress =
-                      await repo.getTaskProgress(item.plannedItemId!);
-                  final remaining =
-                      progress.plannedMinutes - progress.spentMinutes;
-                  final currentDuration =
-                      DateTime.now().difference(item.startTime);
+              ),
+              const SizedBox(width: 8),
+              if (isRunning)
+                IconButton(
+                  onPressed: () async {
+                    final repo = ref.read(todayRepositoryProvider);
+                    if (item.plannedItemId != null) {
+                      // Show review dialog for planned items
+                      final progress =
+                          await repo.getTaskProgress(item.plannedItemId!);
+                      final remaining =
+                          progress.plannedMinutes - progress.spentMinutes;
+                      final currentDuration =
+                          DateTime.now().difference(item.startTime);
 
-                  if (context.mounted) {
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (context) => ReviewTaskModal(
-                        taskName: item.name,
-                        durationWorked: currentDuration,
-                        originalTimeRemaining: remaining > 0 ? remaining : 0,
-                        onConfirm: (isCompleted, remainingMinutes) {
-                          repo.stopTaskWithReview(
-                              item.dailyLogId,
-                              item.id,
-                              isCompleted,
-                              remainingMinutes > 0 ? remainingMinutes : null);
-                        },
+                      if (context.mounted) {
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => ReviewTaskModal(
+                            taskName: item.name,
+                            durationWorked: currentDuration,
+                            originalTimeRemaining:
+                                remaining > 0 ? remaining : 0,
+                            onConfirm: (isCompleted, remainingMinutes) {
+                              repo.stopTaskWithReview(
+                                  item.dailyLogId,
+                                  item.id,
+                                  isCompleted,
+                                  remainingMinutes > 0
+                                      ? remainingMinutes
+                                      : null);
+                            },
+                          ),
+                        );
+                      }
+                    } else {
+                      // Just stop unplanned items
+                      repo.stopTask(item.id);
+                    }
+                  },
+                  icon: const Icon(FontAwesomeIcons.stop,
+                      size: 16, color: Colors.red),
+                  style: IconButton.styleFrom(
+                      backgroundColor: Colors.red.withValues(alpha: 0.1)),
+                )
+              else
+                Text(
+                    "${dateFormat.format(item.startTime)} - ${dateFormat.format(item.endTime!)}",
+                    style: const TextStyle(fontSize: 12, color: Colors.grey))
+            ],
+          ),
+          
+          // Existing remarks
+          if (existingRemarks.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Text("Remarks:",
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            ...existingRemarks.map((remark) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("• ", style: TextStyle(fontSize: 12)),
+                      Expanded(
+                        child: Text(remark,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade700)),
                       ),
-                    );
-                  }
-                } else {
-                  // Just stop unplanned items
-                  repo.stopTask(item.id);
-                }
-              },
-              icon: const Icon(FontAwesomeIcons.stop,
-                  size: 16, color: Colors.red),
-              style: IconButton.styleFrom(
-                  backgroundColor: Colors.red.withValues(alpha: 0.1)),
+                    ],
+                  ),
+                )),
+          ],
+          
+          // Add remark button/input
+          const SizedBox(height: 8),
+          if (!showRemarkInput.value)
+            TextButton.icon(
+              onPressed: () => showRemarkInput.value = true,
+              icon: const Icon(Icons.add_comment, size: 16),
+              label: const Text("Add Remark", style: TextStyle(fontSize: 12)),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             )
           else
-            Text(
-                "${dateFormat.format(item.startTime)} - ${dateFormat.format(item.endTime!)}",
-                style: const TextStyle(fontSize: 12, color: Colors.grey))
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: remarkController,
+                    decoration: InputDecoration(
+                      hintText: "Enter remark...",
+                      hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      isDense: true,
+                    ),
+                    style: const TextStyle(fontSize: 12),
+                    onSubmitted: (_) => addRemark(),
+                    autofocus: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: addRemark,
+                  icon: const Icon(Icons.send, size: 18),
+                  tooltip: "Add Remark",
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                IconButton(
+                  onPressed: () {
+                    remarkController.clear();
+                    showRemarkInput.value = false;
+                  },
+                  icon: const Icon(Icons.close, size: 18),
+                  tooltip: "Cancel",
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
         ],
       ),
     );

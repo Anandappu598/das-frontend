@@ -6,7 +6,7 @@ part of 'today_providers.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$todayLogHash() => r'9541021040ee8a5e6141db04e1216dd58ec23431';
+String _$todayLogHash() => r'2ba6ebf4edda6f11aceec5cc52a619f98fb7d223';
 
 /// See also [todayLog].
 @ProviderFor(todayLog)
@@ -20,7 +20,7 @@ final todayLogProvider = StreamProvider<DailyLogWithDetails?>.internal(
 );
 
 typedef TodayLogRef = StreamProviderRef<DailyLogWithDetails?>;
-String _$monthPlannedItemsHash() => r'3e2ce4514d41397f50b924fc997419f11eea00c8';
+String _$monthPlannedItemsHash() => r'c021a59360848a79b9f7d29f1aad8c3768de312a';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -176,7 +176,7 @@ class _MonthPlannedItemsProviderElement
   DateTime get month => (origin as MonthPlannedItemsProvider).month;
 }
 
-String _$weekPlannedItemsHash() => r'a852186dfeafa017cad1b31b9f2b5564c0ad8865';
+String _$weekPlannedItemsHash() => r'0984187b7954c5028999fd10bd4f93202d1f14c4';
 
 /// See also [weekPlannedItems].
 @ProviderFor(weekPlannedItems)

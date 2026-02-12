@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/core/database/database.dart';
 import 'package:project_pm/src/core/models/daily_log_with_details.dart';
@@ -240,6 +241,7 @@ class _QuadrantBox extends ConsumerWidget {
                         quadrant: drift.Value(quadrant),
                         relatedTaskId:
                             drift.Value(data['relatedTaskId'] as String?),
+                        isCompleted: const drift.Value(false),
                       ));
                 } catch (e) {
                   if (context.mounted) {
@@ -331,12 +333,34 @@ class _QuadrantBox extends ConsumerWidget {
                 ),
               ),
               if (items.isEmpty && !isFinalized)
-                const Center(
-                    child: Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text("Drag items here",
-                            style:
-                                TextStyle(color: Colors.grey, fontSize: 12)))),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_box_outlined,
+                          size: isHovering ? 48 : 36,
+                          color: isHovering
+                              ? color.withValues(alpha: 0.8)
+                              : Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          isHovering ? "Drop here!" : "Drag items here",
+                          style: TextStyle(
+                            color: isHovering ? color : Colors.grey.shade500,
+                            fontSize: isHovering ? 14 : 12,
+                            fontWeight: isHovering
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               if (!isFinalized)
                 InkWell(
                   onTap: () {
@@ -357,6 +381,7 @@ class _QuadrantBox extends ConsumerWidget {
                                     description: drift.Value(description ?? ''),
                                     durationMinutes: drift.Value(duration),
                                     quadrant: drift.Value(quadrant),
+                                    isCompleted: const drift.Value(false),
                                   ));
                             }));
                   },
@@ -422,6 +447,7 @@ class _InboxBox extends ConsumerWidget {
                         durationMinutes: drift.Value(duration),
                         quadrant: const drift.Value('inbox'),
                         relatedTaskId: drift.Value(data['relatedTaskId']),
+                        isCompleted: const drift.Value(false),
                       ));
                 } catch (e) {
                   if (context.mounted) {
@@ -512,7 +538,7 @@ class _InboxBox extends ConsumerWidget {
   }
 }
 
-class _DraggablePlannedItem extends ConsumerWidget {
+class _DraggablePlannedItem extends HookConsumerWidget {
   final PlannedItem item;
   final bool isFinalized;
   final String logId;
@@ -523,28 +549,39 @@ class _DraggablePlannedItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // If finalized, we have a "Start" button instead of drag
+    final isHovered = useState(false);
+
+    // If finalized, we have a "Start" button on hover instead of drag
     if (isFinalized) {
-      return Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Row(
-            children: [
-              Expanded(
-                  child: Text(item.name,
-                      style: const TextStyle(fontWeight: FontWeight.w500))),
-              IconButton(
-                onPressed: () {
-                  ref.read(todayRepositoryProvider).startTask(
-                      logId, item.name, item.description,
-                      plannedItemId: item.id,
-                      relatedTaskId: item.relatedTaskId);
-                },
-                icon: const Icon(Icons.play_circle_fill, color: Colors.blue),
-                tooltip: "Start Task",
-              )
-            ],
+      return MouseRegion(
+        onEnter: (_) => isHovered.value = true,
+        onExit: (_) => isHovered.value = false,
+        child: Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                Expanded(
+                    child: Text(item.name,
+                        style: const TextStyle(fontWeight: FontWeight.w500))),
+                AnimatedOpacity(
+                  opacity: isHovered.value ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: IconButton(
+                    onPressed: () {
+                      ref.read(todayRepositoryProvider).startTask(
+                          logId, item.name, item.description,
+                          plannedItemId: item.id,
+                          relatedTaskId: item.relatedTaskId);
+                    },
+                    icon:
+                        const Icon(Icons.play_circle_fill, color: Colors.blue),
+                    tooltip: "Start Task",
+                  ),
+                )
+              ],
+            ),
           ),
         ),
       );

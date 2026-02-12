@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:project_pm/src/core/database/database.dart';
@@ -226,6 +227,14 @@ class TodayRepository {
     );
   }
 
+  Future<void> updateLoggedItemRemarks(String itemId, List<String> remarks) async {
+    final remarksJson = jsonEncode(remarks);
+    await (_db!.update(_db!.loggedItems)..where((tbl) => tbl.id.equals(itemId)))
+        .write(LoggedItemsCompanion(
+      remarksJson: Value(remarksJson),
+    ));
+  }
+
   Future<void> finalizePlan(String logId) async {
     await (_db!.update(_db!.dailyLogs)..where((tbl) => tbl.id.equals(logId)))
         .write(const DailyLogsCompanion(
@@ -410,6 +419,34 @@ class MockTodayRepository implements TodayRepository {
       String plannedItemId) async {
     // Mock return
     return (plannedMinutes: 60, spentMinutes: 15);
+  }
+
+  @override
+  Future<void> updateLoggedItemRemarks(String itemId, List<String> remarks) async {
+    final current = _logSubject.value!;
+    final remarksJson = jsonEncode(remarks);
+    final updatedLogs = current.loggedItems.map((i) {
+      if (i.id == itemId) {
+        return LoggedItem(
+          id: i.id,
+          dailyLogId: i.dailyLogId,
+          name: i.name,
+          description: i.description,
+          startTime: i.startTime,
+          endTime: i.endTime,
+          isUnplanned: i.isUnplanned,
+          plannedItemId: i.plannedItemId,
+          relatedTaskId: i.relatedTaskId,
+          remarksJson: remarksJson,
+        );
+      }
+      return i;
+    }).toList();
+    _logSubject.add(DailyLogWithDetails(
+      dailyLog: current.dailyLog,
+      plannedItems: current.plannedItems,
+      loggedItems: updatedLogs,
+    ));
   }
 
   @override
