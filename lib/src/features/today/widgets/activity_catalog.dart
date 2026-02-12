@@ -127,16 +127,27 @@ class ActivityCatalog extends HookConsumerWidget {
                         // Add Template Button
                         IconButton(
                           onPressed: () {
+                            // Build existing categories from system templates and custom templates
+                            final customTemplates =
+                                customTemplatesSnapshot.data ?? [];
+                            final systemCategories =
+                                systemTemplates.keys.toList();
+                            final customCategories = customTemplates
+                                .map((t) => t.category)
+                                .toSet()
+                                .toList();
+                            final allCategories = {
+                              ...systemCategories,
+                              ...customCategories,
+                            }.toList()
+                              ..sort();
+
                             showDialog(
                               context: context,
-                              builder: (context) =>
-                                  const AddActivityTemplateModal(
-                                existingCategories: [
-                                  'Education',
-                                  'Routine',
-                                  'Work',
-                                  'Health',
-                                ],
+                              builder: (context) => AddActivityTemplateModal(
+                                existingCategories: allCategories.isEmpty
+                                    ? ['General']
+                                    : allCategories,
                               ),
                             );
                           },
@@ -496,10 +507,9 @@ class _ProjectTaskCard extends ConsumerWidget {
       'projectObject': project.project,
     };
 
-    return LongPressDraggable<Map<String, dynamic>>(
+    return Draggable<Map<String, dynamic>>(
       data: dragData,
       dragAnchorStrategy: pointerDragAnchorStrategy,
-      delay: const Duration(milliseconds: 300),
       feedback: Material(
         elevation: 12,
         borderRadius: BorderRadius.circular(12),
@@ -749,6 +759,7 @@ class _ProjectTaskCard extends ConsumerWidget {
                   durationMinutes: drift.Value(duration),
                   quadrant: const drift.Value('inbox'),
                   relatedTaskId: drift.Value(task.task.id),
+                  isCompleted: const drift.Value(false),
                 ),
               );
             } catch (e) {
@@ -813,10 +824,9 @@ class _SystemTemplateCard extends ConsumerWidget {
       'duration': 30,
     };
 
-    return LongPressDraggable<Map<String, dynamic>>(
+    return Draggable<Map<String, dynamic>>(
       data: dragData,
       dragAnchorStrategy: pointerDragAnchorStrategy,
-      delay: const Duration(milliseconds: 300),
       feedback: Material(
         elevation: 12,
         borderRadius: BorderRadius.circular(10),
@@ -887,6 +897,7 @@ class _SystemTemplateCard extends ConsumerWidget {
                   description: drift.Value(description),
                   durationMinutes: const drift.Value(30),
                   quadrant: const drift.Value('inbox'),
+                  isCompleted: const drift.Value(false),
                 ),
               );
             } catch (e) {
@@ -916,6 +927,12 @@ class _SystemTemplateCard extends ConsumerWidget {
       ),
       child: Row(
         children: [
+          Icon(
+            Icons.drag_indicator,
+            size: 18,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(width: 8),
           Icon(
             icon,
             size: 14,
@@ -990,7 +1007,7 @@ class _CustomTemplateCard extends HookConsumerWidget {
     final categoryIcon = _getCategoryIcon();
     final categoryColor = _getCategoryColor();
 
-    return LongPressDraggable<Map<String, dynamic>>(
+    return Draggable<Map<String, dynamic>>(
       data: {
         'source': 'catalog',
         'type': 'custom_template',
@@ -1000,7 +1017,6 @@ class _CustomTemplateCard extends HookConsumerWidget {
         'category': template.category,
       },
       dragAnchorStrategy: pointerDragAnchorStrategy,
-      delay: const Duration(milliseconds: 300),
       feedback: Material(
         elevation: 12,
         borderRadius: BorderRadius.circular(10),
@@ -1069,6 +1085,7 @@ class _CustomTemplateCard extends HookConsumerWidget {
                   description: drift.Value(template.description ?? ''),
                   durationMinutes: drift.Value(template.defaultDuration),
                   quadrant: const drift.Value('inbox'),
+                  isCompleted: const drift.Value(false),
                 ),
               );
             } catch (e) {
@@ -1098,6 +1115,12 @@ class _CustomTemplateCard extends HookConsumerWidget {
       ),
       child: Row(
         children: [
+          Icon(
+            Icons.drag_indicator,
+            size: 18,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               template.name,

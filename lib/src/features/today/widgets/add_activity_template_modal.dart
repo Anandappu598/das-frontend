@@ -25,12 +25,25 @@ class AddActivityTemplateModal extends HookConsumerWidget {
     final selectedCategory = useState(
         existingCategories.isNotEmpty ? existingCategories.first : 'General');
     final isNewCategory = useState(false);
+    final isSubmitting = useState(false);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final formKey = useMemoized(() => GlobalKey<FormState>());
 
     Future<void> handleSubmit() async {
-      if (!(formKey.currentState?.validate() ?? false)) {
+      debugPrint('=== SUBMIT BUTTON CLICKED ===');
+
+      if (isSubmitting.value) {
+        debugPrint('Already submitting, returning...');
+        return; // Prevent double submission
+      }
+
+      debugPrint('Validating form...');
+      final isValid = formKey.currentState?.validate() ?? false;
+      debugPrint('Form validation result: $isValid');
+
+      if (!isValid) {
+        debugPrint('Form validation failed!');
         return;
       }
 
@@ -39,7 +52,12 @@ class AddActivityTemplateModal extends HookConsumerWidget {
           ? newCategoryController.text.trim()
           : selectedCategory.value;
 
+      debugPrint('Name value: "$name"');
+      debugPrint('Final category: "$finalCategory"');
+      debugPrint('Is new category: ${isNewCategory.value}');
+
       if (name.isEmpty || finalCategory.isEmpty) {
+        debugPrint('Name or category is empty!');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please fill in all required fields'),
@@ -49,19 +67,60 @@ class AddActivityTemplateModal extends HookConsumerWidget {
         return;
       }
 
+      isSubmitting.value = true;
+
       try {
+        debugPrint('Starting template creation...');
+        debugPrint('Name: $name');
+        debugPrint('Category: $finalCategory');
+        debugPrint('Duration: ${duration.value}');
+
         final db = ref.read(databaseProvider);
-        final newTemplate = ActivityTemplatesCompanion(
-          id: drift.Value(const Uuid().v4()),
-          name: drift.Value(name),
-          description: drift.Value(descriptionController.text.trim()),
-          category: drift.Value(finalCategory),
+        final templateId = const Uuid().v4();
+
+        debugPrint('Database instance: $db');
+
+        // Test database connection first
+        debugPrint('Testing database connection...');
+        try {
+          final testResult =
+              await db.customSelect('SELECT 1 as test').get().timeout(
+            const Duration(seconds: 2),
+            onTimeout: () {
+              debugPrint('Database connection test TIMED OUT!');
+              throw Exception('Database not responding');
+            },
+          );
+          debugPrint('Database connection OK: ${testResult.length} rows');
+        } catch (e) {
+          debugPrint('Database connection test FAILED: $e');
+          throw Exception('Database connection failed: $e');
+        }
+
+        final newTemplate = ActivityTemplatesCompanion.insert(
+          id: templateId,
+          name: name,
+          category: finalCategory,
           defaultDuration: drift.Value(duration.value),
-          status: const drift.Value('approved'), // Auto-approve for now
+          description: drift.Value(descriptionController.text.trim()),
+          status: const drift.Value('approved'),
           isSystem: const drift.Value(false),
         );
 
-        await db.into(db.activityTemplates).insert(newTemplate);
+        debugPrint('Inserting template with ID: $templateId');
+        debugPrint('Template companion: $newTemplate');
+
+        // Add timeout to detect hanging
+        await db.into(db.activityTemplates).insert(newTemplate).timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            debugPrint('DATABASE INSERT TIMED OUT!');
+            throw Exception(
+                'Database insert timed out - check database connection');
+          },
+        );
+
+        debugPrint('Template inserted successfully!');
 
         if (context.mounted) {
           Navigator.of(context).pop(); // Close dialog
@@ -69,18 +128,25 @@ class AddActivityTemplateModal extends HookConsumerWidget {
             SnackBar(
               content: Text('Template "$name" created successfully'),
               backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
             ),
           );
         }
-      } catch (e) {
+      } catch (e, stackTrace) {
         debugPrint('Error creating template: $e');
+        debugPrint('Stack trace: $stackTrace');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error saving template: $e'),
+              content: Text('Error: ${e.toString()}'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
             ),
           );
+        }
+      } finally {
+        if (context.mounted) {
+          isSubmitting.value = false;
         }
       }
     }
@@ -256,17 +322,29 @@ class AddActivityTemplateModal extends HookConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: isSubmitting.value
+                        ? null
+                        : () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: handleSubmit,
+                    onPressed: isSubmitting.value ? null : handleSubmit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade600,
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('Submit Template'),
+                    child: isSubmitting.value
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text('Submit Template'),
                   ),
                 ],
               ),
