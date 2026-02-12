@@ -13,6 +13,8 @@ import 'package:project_pm/src/features/projects/project_providers.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/shared/widgets/circular_progress.dart';
 import 'package:project_pm/src/core/database/database_provider.dart';
+import 'package:project_pm/src/features/projects/providers/api_providers.dart';
+import 'package:project_pm/src/features/projects/models/catalog_model.dart';
 
 class ActivityCatalog extends HookConsumerWidget {
   final String dailyLogId;
@@ -77,6 +79,9 @@ class ActivityCatalog extends HookConsumerWidget {
     final expandedCategory =
         useState<String?>('Project'); // Only one expanded at a time
 
+    // Watch catalog data from API
+    final catalogAsync = ref.watch(apiCatalogProvider);
+
     // Watch custom templates from database
     final db = ref.watch(databaseProvider);
     final customTemplatesStream = useMemoized(
@@ -132,22 +137,18 @@ class ActivityCatalog extends HookConsumerWidget {
                                 customTemplatesSnapshot.data ?? [];
                             final systemCategories =
                                 systemTemplates.keys.toList();
-                            final customCategories = customTemplates
-                                .map((t) => t.category)
-                                .toSet()
-                                .toList();
-                            final allCategories = {
-                              ...systemCategories,
-                              ...customCategories,
-                            }.toList()
-                              ..sort();
+                            // Use backend catalog types instead of local categories
+                            const backendCatalogTypes = [
+                              'COURSE',
+                              'ROUTINE',
+                              'WORK',
+                            ];
 
                             showDialog(
                               context: context,
-                              builder: (context) => AddActivityTemplateModal(
-                                existingCategories: allCategories.isEmpty
-                                    ? ['General']
-                                    : allCategories,
+                              builder: (context) =>
+                                  const AddActivityTemplateModal(
+                                existingCategories: backendCatalogTypes,
                               ),
                             );
                           },
@@ -203,6 +204,16 @@ class ActivityCatalog extends HookConsumerWidget {
               data: (projects) {
                 final customTemplates = customTemplatesSnapshot.data ?? [];
 
+                // Get catalog data from API
+                final catalogItems = catalogAsync.when(
+                  data: (data) => data,
+                  loading: () => <CatalogModel>[],
+                  error: (e, _) {
+                    print('Error loading catalog: $e');
+                    return <CatalogModel>[];
+                  },
+                );
+
                 // Filter projects by search
                 final filteredProjects = projects
                     .map((p) {
@@ -227,10 +238,20 @@ class ActivityCatalog extends HookConsumerWidget {
                   templatesByCategory.putIfAbsent(cat, () => []).add(t);
                 }
 
-                // Get all unique categories (system + custom)
+                // Group catalog items by type
+                final catalogByType = <String, List<CatalogModel>>{};
+                for (final item in catalogItems) {
+                  // Map CUSTOM to WORK
+                  final type =
+                      item.catalogType == 'CUSTOM' ? 'WORK' : item.catalogType;
+                  catalogByType.putIfAbsent(type, () => []).add(item);
+                }
+
+                // Get all unique categories (system + custom + catalog)
                 final allCategories = <String>{
-                  'Education',
-                  'Routine',
+                  if (catalogByType.containsKey('COURSE')) 'Education',
+                  if (catalogByType.containsKey('ROUTINE')) 'Routine',
+                  if (catalogByType.containsKey('WORK')) 'Work',
                   ...templatesByCategory.keys,
                 };
 
@@ -301,17 +322,31 @@ class ActivityCatalog extends HookConsumerWidget {
                           }).toList(),
                         ),
 
-                      // Dynamic categories (Education, Routine, Requirements, etc.)
+                      // Dynamic categories (Education, Routine, Work, etc.)
                       ...allCategories.map((category) {
                         // Filter logic
                         if (selectedFilter.value != 'All' &&
                             selectedFilter.value != category) {
                           return const SizedBox.shrink();
                         }
+
+                        // Get items for this category
                         final systemItems = systemTemplates[category] ?? [];
                         final customItems = templatesByCategory[category] ?? [];
-                        final totalCount =
-                            systemItems.length + customItems.length;
+
+                        // Get catalog items based on category
+                        List<CatalogModel> catalogCategoryItems = [];
+                        if (category == 'Education') {
+                          catalogCategoryItems = catalogByType['COURSE'] ?? [];
+                        } else if (category == 'Routine') {
+                          catalogCategoryItems = catalogByType['ROUTINE'] ?? [];
+                        } else if (category == 'Work') {
+                          catalogCategoryItems = catalogByType['WORK'] ?? [];
+                        }
+
+                        final totalCount = systemItems.length +
+                            customItems.length +
+                            catalogCategoryItems.length;
 
                         // Skip empty categories
                         if (totalCount == 0) return const SizedBox.shrink();
@@ -330,6 +365,16 @@ class ActivityCatalog extends HookConsumerWidget {
                           },
                           isDark: isDark,
                           children: [
+                            // Catalog items from API
+                            ...catalogCategoryItems
+                                .where((item) =>
+                                    searchQuery.value.isEmpty ||
+                                    item.name.toLowerCase().contains(
+                                        searchQuery.value.toLowerCase()))
+                                .map((catalogItem) => _CatalogItemCard(
+                                      catalogItem: catalogItem,
+                                      dailyLogId: dailyLogId,
+                                    )),
                             // System templates for this category
                             ...systemItems
                                 .where((item) =>
@@ -953,6 +998,211 @@ class _SystemTemplateCard extends ConsumerWidget {
             size: 18,
             color: Colors.blue.shade500,
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Card for catalog items from API (Course, Routine, Work)
+class _CatalogItemCard extends ConsumerWidget {
+  final CatalogModel catalogItem;
+  final String dailyLogId;
+
+  const _CatalogItemCard({
+    required this.catalogItem,
+    required this.dailyLogId,
+  });
+
+  IconData _getIcon() {
+    switch (catalogItem.catalogType) {
+      case 'COURSE':
+        return FontAwesomeIcons.graduationCap;
+      case 'ROUTINE':
+        return FontAwesomeIcons.mugHot;
+      case 'CUSTOM':
+        return FontAwesomeIcons.briefcase;
+      default:
+        return FontAwesomeIcons.folder;
+    }
+  }
+
+  Color _getColor() {
+    switch (catalogItem.catalogType) {
+      case 'COURSE':
+        return Colors.purple;
+      case 'ROUTINE':
+        return Colors.orange;
+      case 'CUSTOM':
+        return Colors.blue;
+      default:
+        return Colors.teal;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = _getColor();
+
+    final dragData = {
+      'source': 'catalog',
+      'type': 'catalog_item',
+      'catalog_id': catalogItem.id,
+      'name': catalogItem.name,
+      'description': catalogItem.description,
+      'duration': (double.tryParse(catalogItem.estimatedHours) ?? 1.0) * 60,
+    };
+
+    return Draggable<Map<String, dynamic>>(
+      data: dragData,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: Material(
+        elevation: 12,
+        borderRadius: BorderRadius.circular(10),
+        color: Colors.transparent,
+        child: Container(
+          width: 220,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1F2937) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_getIcon(), size: 16, color: color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  catalogItem.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: isDark ? Colors.white : Colors.black87,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.5,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _buildContent(isDark, color),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: InkWell(
+          onTap: () async {
+            try {
+              // Get current date in YYYY-MM-DD format
+              final now = DateTime.now();
+              final planDate =
+                  '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+              // Calculate duration in minutes from estimated hours
+              final durationMinutes =
+                  ((double.tryParse(catalogItem.estimatedHours) ?? 1.0) * 60)
+                      .toInt();
+
+              // Get API service
+              final apiService = ref.read(taskApiServiceProvider);
+
+              // Call API to add catalog item to daily plan
+              await apiService.addCatalogToDailyPlan(
+                catalogId: catalogItem.id,
+                planDate: planDate,
+                plannedDurationMinutes: durationMinutes,
+                notes: catalogItem.description.isNotEmpty
+                    ? catalogItem.description
+                    : null,
+              );
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content:
+                        Text('Added "${catalogItem.name}" to today\'s plan'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to add catalog item: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: _buildContent(isDark, color),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(bool isDark, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF374151) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? const Color(0xFF4B5563) : Colors.grey.shade200,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.drag_indicator, size: 18, color: Colors.grey.shade400),
+          const SizedBox(width: 8),
+          Icon(_getIcon(), size: 14, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  catalogItem.name,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (catalogItem.description.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      catalogItem.description,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(Icons.add_circle_outline, size: 18, color: Colors.blue.shade500),
         ],
       ),
     );

@@ -8,6 +8,8 @@ import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
 import 'package:project_pm/src/features/today/widgets/task_config_modal.dart';
+import 'package:project_pm/src/features/projects/providers/api_providers.dart';
+import 'package:project_pm/src/features/today/today_providers.dart';
 
 class DayPlanner extends HookConsumerWidget {
   final DailyLogWithDetails? dailyLogWithDetails;
@@ -23,6 +25,9 @@ class DayPlanner extends HookConsumerWidget {
     final plannedItems = dailyLogWithDetails!.plannedItems;
     final log = dailyLogWithDetails!.dailyLog;
     final isFinalized = log.isFinalized;
+
+    // Watch API today plan data
+    final apiTodayPlanAsync = ref.watch(apiTodayPlanProvider);
 
     return Column(
       children: [
@@ -76,84 +81,268 @@ class DayPlanner extends HookConsumerWidget {
                     : Colors.grey.shade300,
               ),
             ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: _QuadrantBox(
-                        quadrant: 'q1',
-                        title: 'Start First',
-                        subtitle: 'Urgent & Important',
-                        color: Colors.red,
-                        items: plannedItems
-                            .where((i) => i.quadrant == 'q1')
-                            .toList(),
-                        isFinalized: isFinalized,
-                        logId: log.id,
-                        isGrouped: true),
+            child: apiTodayPlanAsync.when(
+              data: (apiPlanItems) {
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _QuadrantBox(
+                            quadrant: 'Q1',
+                            title: 'Start First',
+                            subtitle: 'Urgent & Important',
+                            color: Colors.red,
+                            items: plannedItems
+                                .where((i) => i.quadrant == 'Q1')
+                                .toList(),
+                            apiItems: apiPlanItems
+                                .where((i) => i['quadrant'] == 'Q1')
+                                .toList(),
+                            isFinalized: isFinalized,
+                            logId: log.id,
+                            isGrouped: true),
+                      ),
+                      VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF4B5563)
+                            : Colors.grey.shade300,
+                      ),
+                      Expanded(
+                        child: _QuadrantBox(
+                            quadrant: 'Q2',
+                            title: 'Schedule',
+                            subtitle: 'Important, Not Urgent',
+                            color: Colors.blue,
+                            items: plannedItems
+                                .where((i) => i.quadrant == 'Q2')
+                                .toList(),
+                            apiItems: apiPlanItems
+                                .where((i) => i['quadrant'] == 'Q2')
+                                .toList(),
+                            isFinalized: isFinalized,
+                            logId: log.id,
+                            isGrouped: true),
+                      ),
+                      VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF4B5563)
+                            : Colors.grey.shade300,
+                      ),
+                      Expanded(
+                        child: _QuadrantBox(
+                            quadrant: 'Q3',
+                            title: 'Delegate',
+                            subtitle: 'Urgent, Not Important',
+                            color: Colors.orange,
+                            items: plannedItems
+                                .where((i) => i.quadrant == 'Q3')
+                                .toList(),
+                            apiItems: apiPlanItems
+                                .where((i) => i['quadrant'] == 'Q3')
+                                .toList(),
+                            isFinalized: isFinalized,
+                            logId: log.id,
+                            isGrouped: true),
+                      ),
+                      VerticalDivider(
+                        width: 1,
+                        thickness: 1,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF4B5563)
+                            : Colors.grey.shade300,
+                      ),
+                      Expanded(
+                        child: _QuadrantBox(
+                            quadrant: 'Q4',
+                            title: 'Routine',
+                            subtitle: 'Backlog & Breaks',
+                            color: Colors.green,
+                            items: plannedItems
+                                .where((i) => i.quadrant == 'Q4')
+                                .toList(),
+                            apiItems: apiPlanItems
+                                .where((i) => i['quadrant'] == 'Q4')
+                                .toList(),
+                            isFinalized: isFinalized,
+                            logId: log.id,
+                            isGrouped: true),
+                      ),
+                    ],
                   ),
-                  VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF4B5563)
-                        : Colors.grey.shade300,
-                  ),
-                  Expanded(
-                    child: _QuadrantBox(
-                        quadrant: 'q2',
-                        title: 'Schedule',
-                        subtitle: 'Important, Not Urgent',
-                        color: Colors.blue,
-                        items: plannedItems
-                            .where((i) => i.quadrant == 'q2')
-                            .toList(),
-                        isFinalized: isFinalized,
-                        logId: log.id,
-                        isGrouped: true),
-                  ),
-                  VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF4B5563)
-                        : Colors.grey.shade300,
-                  ),
-                  Expanded(
-                    child: _QuadrantBox(
-                        quadrant: 'q3',
-                        title: 'Delegate',
-                        subtitle: 'Urgent, Not Important',
-                        color: Colors.orange,
-                        items: plannedItems
-                            .where((i) => i.quadrant == 'q3')
-                            .toList(),
-                        isFinalized: isFinalized,
-                        logId: log.id,
-                        isGrouped: true),
-                  ),
-                  VerticalDivider(
-                    width: 1,
-                    thickness: 1,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF4B5563)
-                        : Colors.grey.shade300,
-                  ),
-                  Expanded(
-                    child: _QuadrantBox(
-                        quadrant: 'q4',
-                        title: 'Routine',
-                        subtitle: 'Backlog & Breaks',
-                        color: Colors.green,
-                        items: plannedItems
-                            .where((i) => i.quadrant == 'q4')
-                            .toList(),
-                        isFinalized: isFinalized,
-                        logId: log.id,
-                        isGrouped: true),
-                  ),
-                ],
+                );
+              },
+              loading: () => IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _QuadrantBox(
+                          quadrant: 'Q1',
+                          title: 'Start First',
+                          subtitle: 'Urgent & Important',
+                          color: Colors.red,
+                          items: plannedItems
+                              .where((i) => i.quadrant == 'Q1')
+                              .toList(),
+                          apiItems: [],
+                          isFinalized: isFinalized,
+                          logId: log.id,
+                          isGrouped: true),
+                    ),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF4B5563)
+                          : Colors.grey.shade300,
+                    ),
+                    Expanded(
+                      child: _QuadrantBox(
+                          quadrant: 'Q2',
+                          title: 'Schedule',
+                          subtitle: 'Important, Not Urgent',
+                          color: Colors.blue,
+                          items: plannedItems
+                              .where((i) => i.quadrant == 'Q2')
+                              .toList(),
+                          apiItems: [],
+                          isFinalized: isFinalized,
+                          logId: log.id,
+                          isGrouped: true),
+                    ),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF4B5563)
+                          : Colors.grey.shade300,
+                    ),
+                    Expanded(
+                      child: _QuadrantBox(
+                          quadrant: 'Q3',
+                          title: 'Delegate',
+                          subtitle: 'Urgent, Not Important',
+                          color: Colors.orange,
+                          items: plannedItems
+                              .where((i) => i.quadrant == 'Q3')
+                              .toList(),
+                          apiItems: [],
+                          isFinalized: isFinalized,
+                          logId: log.id,
+                          isGrouped: true),
+                    ),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF4B5563)
+                          : Colors.grey.shade300,
+                    ),
+                    Expanded(
+                      child: _QuadrantBox(
+                          quadrant: 'Q4',
+                          title: 'Routine',
+                          subtitle: 'Backlog & Breaks',
+                          color: Colors.green,
+                          items: plannedItems
+                              .where((i) => i.quadrant == 'Q4')
+                              .toList(),
+                          apiItems: [],
+                          isFinalized: isFinalized,
+                          logId: log.id,
+                          isGrouped: true),
+                    ),
+                  ],
+                ),
+              ),
+              error: (error, stack) => IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _QuadrantBox(
+                          quadrant: 'Q1',
+                          title: 'Start First',
+                          subtitle: 'Urgent & Important',
+                          color: Colors.red,
+                          items: plannedItems
+                              .where((i) => i.quadrant == 'Q1')
+                              .toList(),
+                          apiItems: [],
+                          isFinalized: isFinalized,
+                          logId: log.id,
+                          isGrouped: true),
+                    ),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF4B5563)
+                          : Colors.grey.shade300,
+                    ),
+                    Expanded(
+                      child: _QuadrantBox(
+                          quadrant: 'Q2',
+                          title: 'Schedule',
+                          subtitle: 'Important, Not Urgent',
+                          color: Colors.blue,
+                          items: plannedItems
+                              .where((i) => i.quadrant == 'Q2')
+                              .toList(),
+                          apiItems: [],
+                          isFinalized: isFinalized,
+                          logId: log.id,
+                          isGrouped: true),
+                    ),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF4B5563)
+                          : Colors.grey.shade300,
+                    ),
+                    Expanded(
+                      child: _QuadrantBox(
+                          quadrant: 'Q3',
+                          title: 'Delegate',
+                          subtitle: 'Urgent, Not Important',
+                          color: Colors.orange,
+                          items: plannedItems
+                              .where((i) => i.quadrant == 'Q3')
+                              .toList(),
+                          apiItems: [],
+                          isFinalized: isFinalized,
+                          logId: log.id,
+                          isGrouped: true),
+                    ),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF4B5563)
+                          : Colors.grey.shade300,
+                    ),
+                    Expanded(
+                      child: _QuadrantBox(
+                          quadrant: 'Q4',
+                          title: 'Routine',
+                          subtitle: 'Backlog & Breaks',
+                          color: Colors.green,
+                          items: plannedItems
+                              .where((i) => i.quadrant == 'Q4')
+                              .toList(),
+                          apiItems: [],
+                          isFinalized: isFinalized,
+                          logId: log.id,
+                          isGrouped: true),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -169,8 +358,109 @@ class DayPlanner extends HookConsumerWidget {
                     plannedItems.where((i) => i.quadrant == 'inbox').toList(),
                 logId: log.id),
           )
-        ]
+        ],
+
+        // Total Time Display
+        Padding(
+          padding: const EdgeInsets.only(top: 16.0),
+          child: _TotalTimeDisplay(plannedItems: plannedItems),
+        ),
       ],
+    );
+  }
+}
+
+/// Widget to display total planned time
+class _TotalTimeDisplay extends HookConsumerWidget {
+  final List<PlannedItem> plannedItems;
+
+  const _TotalTimeDisplay({required this.plannedItems});
+
+  String _formatDuration(int totalMinutes) {
+    final hours = totalMinutes ~/ 60;
+    final minutes = totalMinutes % 60;
+
+    if (hours > 0 && minutes > 0) {
+      return '${hours}h ${minutes}m';
+    } else if (hours > 0) {
+      return '${hours}h';
+    } else {
+      return '${minutes}m';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Get API today plan data
+    final apiTodayPlanAsync = ref.watch(apiTodayPlanProvider);
+
+    // Calculate total from local planned items
+    final localTotalMinutes = plannedItems.fold<int>(
+      0,
+      (sum, item) => sum + (item.durationMinutes ?? 0),
+    );
+
+    return apiTodayPlanAsync.when(
+      data: (apiPlanItems) {
+        // Calculate total from API plan items
+        final apiTotalMinutes = apiPlanItems.fold<int>(
+          0,
+          (sum, item) => sum + (item['planned_duration_minutes'] as int? ?? 0),
+        );
+
+        // Use API total if available, otherwise use local
+        final totalMinutes =
+            apiTotalMinutes > 0 ? apiTotalMinutes : localTotalMinutes;
+
+        return _buildTimeDisplay(context, totalMinutes);
+      },
+      loading: () => _buildTimeDisplay(context, localTotalMinutes),
+      error: (e, _) => _buildTimeDisplay(context, localTotalMinutes),
+    );
+  }
+
+  Widget _buildTimeDisplay(BuildContext context, int totalMinutes) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF4B5563)
+              : Colors.grey.shade300,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.access_time,
+                size: 20,
+                color: Theme.of(context).primaryColor,
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Total Planned Time:',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            _formatDuration(totalMinutes),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -181,6 +471,7 @@ class _QuadrantBox extends ConsumerWidget {
   final String subtitle;
   final Color color;
   final List<PlannedItem> items;
+  final List<Map<String, dynamic>> apiItems;
   final bool isFinalized;
   final String logId;
 
@@ -192,6 +483,7 @@ class _QuadrantBox extends ConsumerWidget {
       required this.subtitle,
       required this.color,
       required this.items,
+      required this.apiItems,
       required this.isFinalized,
       required this.logId,
       this.isGrouped = false});
@@ -215,44 +507,85 @@ class _QuadrantBox extends ConsumerWidget {
             }
           }
         } else if (data is Map<String, dynamic>) {
-          // Show dialog before adding
-          showDialog(
-            context: context,
-            builder: (context) => TaskConfigModal(
-              taskObject: data['taskObject'] as Task?,
-              projectObject: data['projectObject'] as Project?,
-              initialTitle: data['name'] as String?,
-              initialDescription: data['description'] as String?,
-              initialDuration: data['duration'] as int?,
-              onConfirm: (
-                  {required String name,
-                  required int duration,
-                  String? description,
-                  List<String>? selectedMilestoneIds}) async {
-                try {
-                  await repo.addPlannedItem(
-                      logId,
-                      PlannedItemsCompanion.insert(
-                        id: const Uuid().v4(),
-                        dailyLogId: logId,
-                        name: name,
-                        description: drift.Value(description ?? ''),
-                        durationMinutes: drift.Value(duration),
-                        quadrant: drift.Value(quadrant),
-                        relatedTaskId:
-                            drift.Value(data['relatedTaskId'] as String?),
-                        isCompleted: const drift.Value(false),
-                      ));
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to add item: $e')),
-                    );
+          // Check if it's a catalog item - call API directly
+          if (data['type'] == 'catalog_item' && data['catalog_id'] != null) {
+            try {
+              final apiService = ref.read(taskApiServiceProvider);
+              final now = DateTime.now();
+              final planDate =
+                  '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+              await apiService.addCatalogToDailyPlan(
+                catalogId: data['catalog_id'] as int,
+                planDate: planDate,
+                plannedDurationMinutes: (data['duration'] as num).toInt(),
+                notes: data['description'] as String?,
+                quadrant: quadrant,
+              );
+
+              // Invalidate the today log provider to refresh data
+              ref.invalidate(todayLogProvider);
+              // Also invalidate API today plan provider
+              ref.invalidate(apiTodayPlanProvider);
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Added "${data['name']}" to today\'s plan'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to add catalog item: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } else {
+            // Show dialog before adding for non-catalog items
+            showDialog(
+              context: context,
+              builder: (context) => TaskConfigModal(
+                taskObject: data['taskObject'] as Task?,
+                projectObject: data['projectObject'] as Project?,
+                initialTitle: data['name'] as String?,
+                initialDescription: data['description'] as String?,
+                initialDuration: data['duration'] as int?,
+                onConfirm: (
+                    {required String name,
+                    required int duration,
+                    String? description,
+                    List<String>? selectedMilestoneIds}) async {
+                  try {
+                    await repo.addPlannedItem(
+                        logId,
+                        PlannedItemsCompanion.insert(
+                          id: const Uuid().v4(),
+                          dailyLogId: logId,
+                          name: name,
+                          description: drift.Value(description ?? ''),
+                          durationMinutes: drift.Value(duration),
+                          quadrant: drift.Value(quadrant),
+                          relatedTaskId:
+                              drift.Value(data['relatedTaskId'] as String?),
+                          isCompleted: const drift.Value(false),
+                        ));
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to add item: $e')),
+                      );
+                    }
                   }
-                }
-              },
-            ),
-          );
+                },
+              ),
+            );
+          }
         }
       },
       builder: (context, candidateData, rejectedData) {
@@ -323,16 +656,22 @@ class _QuadrantBox extends ConsumerWidget {
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.all(8),
-                  itemCount: items.length,
+                  itemCount: items.length + apiItems.length,
                   separatorBuilder: (c, i) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
-                    final item = items[index];
-                    return _DraggablePlannedItem(
-                        item: item, isFinalized: isFinalized, logId: logId);
+                    if (index < items.length) {
+                      final item = items[index];
+                      return _DraggablePlannedItem(
+                          item: item, isFinalized: isFinalized, logId: logId);
+                    } else {
+                      // Display API item
+                      final apiItem = apiItems[index - items.length];
+                      return _ApiPlannedItem(apiItem: apiItem);
+                    }
                   },
                 ),
               ),
-              if (items.isEmpty && !isFinalized)
+              if (items.isEmpty && apiItems.isEmpty && !isFinalized)
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -423,43 +762,84 @@ class _InboxBox extends ConsumerWidget {
             }
           }
         } else if (data is Map<String, dynamic>) {
-          showDialog(
-            context: context,
-            builder: (context) => TaskConfigModal(
-              taskObject: data['taskObject'] as Task?,
-              projectObject: data['projectObject'] as Project?,
-              initialTitle: data['name'] as String?,
-              initialDescription: data['description'] as String?,
-              initialDuration: data['duration'] as int?,
-              onConfirm: (
-                  {required String name,
-                  required int duration,
-                  String? description,
-                  List<String>? selectedMilestoneIds}) async {
-                try {
-                  await repo.addPlannedItem(
-                      logId,
-                      PlannedItemsCompanion.insert(
-                        id: const Uuid().v4(),
-                        dailyLogId: logId,
-                        name: name,
-                        description: drift.Value(description ?? ''),
-                        durationMinutes: drift.Value(duration),
-                        quadrant: const drift.Value('inbox'),
-                        relatedTaskId: drift.Value(data['relatedTaskId']),
-                        isCompleted: const drift.Value(false),
-                      ));
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text('Failed to add item to inbox: $e')),
-                    );
+          // Check if it's a catalog item - call API directly
+          if (data['type'] == 'catalog_item' && data['catalog_id'] != null) {
+            try {
+              final apiService = ref.read(taskApiServiceProvider);
+              final now = DateTime.now();
+              final planDate =
+                  '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+              await apiService.addCatalogToDailyPlan(
+                catalogId: data['catalog_id'] as int,
+                planDate: planDate,
+                plannedDurationMinutes: (data['duration'] as num).toInt(),
+                notes: data['description'] as String?,
+                quadrant: 'INBOX',
+              );
+
+              // Invalidate the today log provider to refresh data
+              ref.invalidate(
+                  todayLogProvider); // Also invalidate API today plan provider
+              ref.invalidate(apiTodayPlanProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Added \"${data['name']}\" to inbox'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to add catalog item: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          } else {
+            // Show dialog for non-catalog items
+            showDialog(
+              context: context,
+              builder: (context) => TaskConfigModal(
+                taskObject: data['taskObject'] as Task?,
+                projectObject: data['projectObject'] as Project?,
+                initialTitle: data['name'] as String?,
+                initialDescription: data['description'] as String?,
+                initialDuration: data['duration'] as int?,
+                onConfirm: (
+                    {required String name,
+                    required int duration,
+                    String? description,
+                    List<String>? selectedMilestoneIds}) async {
+                  try {
+                    await repo.addPlannedItem(
+                        logId,
+                        PlannedItemsCompanion.insert(
+                          id: const Uuid().v4(),
+                          dailyLogId: logId,
+                          name: name,
+                          description: drift.Value(description ?? ''),
+                          durationMinutes: drift.Value(duration),
+                          quadrant: const drift.Value('inbox'),
+                          relatedTaskId: drift.Value(data['relatedTaskId']),
+                          isCompleted: const drift.Value(false),
+                        ));
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text('Failed to add item to inbox: $e')),
+                      );
+                    }
                   }
-                }
-              },
-            ),
-          );
+                },
+              ),
+            );
+          }
         }
       },
       builder: (context, candidateData, rejectedData) {
@@ -702,6 +1082,68 @@ class _ItemContent extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Widget to display API-fetched planned items
+class _ApiPlannedItem extends StatelessWidget {
+  final Map<String, dynamic> apiItem;
+
+  const _ApiPlannedItem({required this.apiItem});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final catalogName = apiItem['catalog_name'] as String? ?? 'Unnamed';
+    final durationMinutes = apiItem['planned_duration_minutes'] as int? ?? 0;
+    final notes = apiItem['notes'] as String? ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1F2937) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? const Color(0xFF4B5563) : Colors.grey.shade300,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            catalogName,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (notes.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0),
+              child: Text(
+                notes,
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF374151) : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              "$durationMinutes min",
+              style: TextStyle(
+                fontSize: 10,
+                color: isDark ? Colors.grey.shade400 : Colors.grey,
+              ),
+            ),
+          )
+        ],
       ),
     );
   }

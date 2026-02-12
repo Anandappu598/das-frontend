@@ -239,18 +239,18 @@ class _WorkStatisticsChartState extends State<WorkStatisticsChart> {
         ),
         const SizedBox(height: 12),
         // Legend Header
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("PROJECT",
+              Text("PROJECT",
                   style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                       color: Colors.grey)),
               Row(
-                children: const [
+                children: [
                   Text("TASKS", // Changed from HOURS as we are counting tasks
                       style: TextStyle(
                           fontSize: 10,
