@@ -227,7 +227,8 @@ class TodayRepository {
     );
   }
 
-  Future<void> updateLoggedItemRemarks(String itemId, List<String> remarks) async {
+  Future<void> updateLoggedItemRemarks(
+      String itemId, List<String> remarks) async {
     final remarksJson = jsonEncode(remarks);
     await (_db!.update(_db!.loggedItems)..where((tbl) => tbl.id.equals(itemId)))
         .write(LoggedItemsCompanion(
@@ -422,7 +423,8 @@ class MockTodayRepository implements TodayRepository {
   }
 
   @override
-  Future<void> updateLoggedItemRemarks(String itemId, List<String> remarks) async {
+  Future<void> updateLoggedItemRemarks(
+      String itemId, List<String> remarks) async {
     final current = _logSubject.value!;
     final remarksJson = jsonEncode(remarks);
     final updatedLogs = current.loggedItems.map((i) {

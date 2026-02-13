@@ -45,25 +45,67 @@ class DayPlanner extends HookConsumerWidget {
                 ],
               ),
               if (!isFinalized)
-                ElevatedButton.icon(
-                  onPressed: () {
-                    if (plannedItems.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              "Please add items to your plan before starting the day."),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-                    ref.read(todayRepositoryProvider).finalizePlan(log.id);
-                  },
-                  icon: const Icon(Icons.play_arrow, size: 16),
-                  label: const Text("Start Day"),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white),
+                apiTodayPlanAsync.when(
+                  data: (apiItems) => ElevatedButton.icon(
+                    onPressed: () {
+                      if (plannedItems.isEmpty && apiItems.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                "Please add items to your plan before starting the day."),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      ref.read(todayRepositoryProvider).finalizePlan(log.id);
+                    },
+                    icon: const Icon(Icons.play_arrow, size: 16),
+                    label: const Text("Start Day"),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white),
+                  ),
+                  loading: () => ElevatedButton.icon(
+                    onPressed: () {
+                      if (plannedItems.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                "Please add items to your plan before starting the day."),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      ref.read(todayRepositoryProvider).finalizePlan(log.id);
+                    },
+                    icon: const Icon(Icons.play_arrow, size: 16),
+                    label: const Text("Start Day"),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white),
+                  ),
+                  error: (_, __) => ElevatedButton.icon(
+                    onPressed: () {
+                      if (plannedItems.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                "Please add items to your plan before starting the day."),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      ref.read(todayRepositoryProvider).finalizePlan(log.id);
+                    },
+                    icon: const Icon(Icons.play_arrow, size: 16),
+                    label: const Text("Start Day"),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white),
+                  ),
                 )
             ],
           ),

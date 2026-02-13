@@ -162,7 +162,7 @@ class _LoggedItemCard extends HookConsumerWidget {
     final dateFormat = DateFormat('HH:mm');
     final remarkController = useTextEditingController();
     final showRemarkInput = useState(false);
-    
+
     // Parse existing remarks from JSON
     List<String> existingRemarks = [];
     try {
@@ -176,12 +176,12 @@ class _LoggedItemCard extends HookConsumerWidget {
 
     void addRemark() {
       if (remarkController.text.trim().isEmpty) return;
-      
+
       final newRemarks = [...existingRemarks, remarkController.text.trim()];
       ref.read(todayRepositoryProvider).updateLoggedItemRemarks(
-        item.id,
-        newRemarks,
-      );
+            item.id,
+            newRemarks,
+          );
       remarkController.clear();
       showRemarkInput.value = false;
     }
@@ -293,7 +293,7 @@ class _LoggedItemCard extends HookConsumerWidget {
                     style: const TextStyle(fontSize: 12, color: Colors.grey))
             ],
           ),
-          
+
           // Existing remarks
           if (existingRemarks.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -315,7 +315,7 @@ class _LoggedItemCard extends HookConsumerWidget {
                   ),
                 )),
           ],
-          
+
           // Add remark button/input
           const SizedBox(height: 8),
           if (!showRemarkInput.value)
@@ -337,7 +337,8 @@ class _LoggedItemCard extends HookConsumerWidget {
                     controller: remarkController,
                     decoration: InputDecoration(
                       hintText: "Enter remark...",
-                      hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                      hintStyle:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade400),
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                       border: OutlineInputBorder(
