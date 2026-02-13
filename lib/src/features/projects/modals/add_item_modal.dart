@@ -116,6 +116,37 @@ class _StandardTab extends HookConsumerWidget {
 
     return _BaseTabContent(
       title: "Add Standard Item",
+      onCancel: () => Navigator.pop(context),
+      onCreate: () async {
+        if (nameController.text.isEmpty) {
+          return _showError(context, "Name required");
+        }
+        final idsJson =
+            jsonEncode(selectedAssignees.value.map((u) => u.id).toList());
+        final milestonesJson =
+            jsonEncode(milestones.value.map((m) => m.toJson()).toList());
+
+        final newTask = TasksCompanion(
+          id: drift.Value(const Uuid().v4()),
+          projectId: drift.Value(projectId),
+          name: drift.Value(nameController.text),
+          priority: drift.Value(priority.value),
+          startDate: drift.Value(startDate.value),
+          endDate: drift.Value(deadline.value),
+          progress: const drift.Value(0),
+          assigneesJson: drift.Value(idsJson),
+          milestonesJson: drift.Value(milestonesJson),
+          approvalStatus: const drift.Value('pending_creation'),
+          githubLink: drift.Value(
+              githubController.text.isEmpty ? null : githubController.text),
+          figmaLink: drift.Value(
+              figmaController.text.isEmpty ? null : figmaController.text),
+          taskType: const drift.Value('standard'),
+        );
+        await ref.read(projectRepositoryProvider).createTask(newTask);
+        if (context.mounted) Navigator.pop(context);
+      },
+      createLabel: "Create Standard",
       children: [
         _buildRow([
           _buildField(
@@ -161,36 +192,6 @@ class _StandardTab extends HookConsumerWidget {
         _buildMilestonesSection(
             milestones, milestoneNameController, milestoneWeightController),
       ],
-      onCancel: () => Navigator.pop(context),
-      onCreate: () async {
-        if (nameController.text.isEmpty)
-          return _showError(context, "Name required");
-        final idsJson =
-            jsonEncode(selectedAssignees.value.map((u) => u.id).toList());
-        final milestonesJson =
-            jsonEncode(milestones.value.map((m) => m.toJson()).toList());
-
-        final newTask = TasksCompanion(
-          id: drift.Value(const Uuid().v4()),
-          projectId: drift.Value(projectId),
-          name: drift.Value(nameController.text),
-          priority: drift.Value(priority.value),
-          startDate: drift.Value(startDate.value),
-          endDate: drift.Value(deadline.value),
-          progress: const drift.Value(0),
-          assigneesJson: drift.Value(idsJson),
-          milestonesJson: drift.Value(milestonesJson),
-          approvalStatus: const drift.Value('pending_creation'),
-          githubLink: drift.Value(
-              githubController.text.isEmpty ? null : githubController.text),
-          figmaLink: drift.Value(
-              figmaController.text.isEmpty ? null : figmaController.text),
-          taskType: const drift.Value('standard'),
-        );
-        await ref.read(projectRepositoryProvider).createTask(newTask);
-        if (context.mounted) Navigator.pop(context);
-      },
-      createLabel: "Create Standard",
     );
   }
 }
@@ -217,6 +218,35 @@ class _RecurringTab extends HookConsumerWidget {
 
     return _BaseTabContent(
       title: "Add Recurring Item",
+      onCancel: () => Navigator.pop(context),
+      onCreate: () async {
+        if (nameController.text.isEmpty) {
+          return _showError(context, "Name required");
+        }
+        final idsJson =
+            jsonEncode(selectedAssignees.value.map((u) => u.id).toList());
+        final milestonesJson =
+            jsonEncode(milestones.value.map((m) => m.toJson()).toList());
+
+        final newTask = TasksCompanion(
+          id: drift.Value(const Uuid().v4()),
+          projectId: drift.Value(projectId),
+          name: drift.Value(nameController.text),
+          priority: drift.Value(priority.value),
+          startDate: drift.Value(startDate.value),
+          endDate: drift.Value(nextOccurrence.value),
+          progress: const drift.Value(0),
+          assigneesJson: drift.Value(idsJson),
+          milestonesJson: drift.Value(milestonesJson),
+          approvalStatus: const drift.Value('pending_creation'),
+          taskType: const drift.Value('recurring'),
+          recurrencePattern: drift.Value(pattern.value),
+          nextOccurrence: drift.Value(nextOccurrence.value),
+        );
+        await ref.read(projectRepositoryProvider).createTask(newTask);
+        if (context.mounted) Navigator.pop(context);
+      },
+      createLabel: "Create Recurring",
       children: [
         _buildRow([
           _buildField(
@@ -293,34 +323,6 @@ class _RecurringTab extends HookConsumerWidget {
             milestones, milestoneNameController, milestoneWeightController,
             isRecurring: true),
       ],
-      onCancel: () => Navigator.pop(context),
-      onCreate: () async {
-        if (nameController.text.isEmpty)
-          return _showError(context, "Name required");
-        final idsJson =
-            jsonEncode(selectedAssignees.value.map((u) => u.id).toList());
-        final milestonesJson =
-            jsonEncode(milestones.value.map((m) => m.toJson()).toList());
-
-        final newTask = TasksCompanion(
-          id: drift.Value(const Uuid().v4()),
-          projectId: drift.Value(projectId),
-          name: drift.Value(nameController.text),
-          priority: drift.Value(priority.value),
-          startDate: drift.Value(startDate.value),
-          endDate: drift.Value(nextOccurrence.value),
-          progress: const drift.Value(0),
-          assigneesJson: drift.Value(idsJson),
-          milestonesJson: drift.Value(milestonesJson),
-          approvalStatus: const drift.Value('pending_creation'),
-          taskType: const drift.Value('recurring'),
-          recurrencePattern: drift.Value(pattern.value),
-          nextOccurrence: drift.Value(nextOccurrence.value),
-        );
-        await ref.read(projectRepositoryProvider).createTask(newTask);
-        if (context.mounted) Navigator.pop(context);
-      },
-      createLabel: "Create Recurring",
     );
   }
 }
@@ -342,6 +344,32 @@ class _RoutineTab extends HookConsumerWidget {
 
     return _BaseTabContent(
       title: "Add Routine Item",
+      onCancel: () => Navigator.pop(context),
+      onCreate: () async {
+        if (nameController.text.isEmpty) {
+          return _showError(context, "Name required");
+        }
+        final idsJson =
+            jsonEncode(selectedAssignees.value.map((u) => u.id).toList());
+
+        final newTask = TasksCompanion(
+          id: drift.Value(const Uuid().v4()),
+          projectId: drift.Value(projectId),
+          name: drift.Value(nameController.text),
+          priority: drift.Value(priority.value),
+          startDate: drift.Value(startDate.value),
+          endDate: drift.Value(deadline.value),
+          progress: const drift.Value(0),
+          assigneesJson: drift.Value(idsJson),
+          milestonesJson: const drift.Value('[]'),
+          approvalStatus: const drift.Value('pending_creation'),
+          taskType: const drift.Value('routine'),
+        );
+        await ref.read(projectRepositoryProvider).createTask(newTask);
+        if (context.mounted) Navigator.pop(context);
+      },
+      createLabel: "Create Routine",
+      buttonColor: Colors.blue.shade700,
       children: [
         _buildRow([
           _buildField(
@@ -366,31 +394,6 @@ class _RoutineTab extends HookConsumerWidget {
         const SizedBox(height: 24),
         _buildAssigneesSection(context, allUsersAsync, selectedAssignees),
       ],
-      onCancel: () => Navigator.pop(context),
-      onCreate: () async {
-        if (nameController.text.isEmpty)
-          return _showError(context, "Name required");
-        final idsJson =
-            jsonEncode(selectedAssignees.value.map((u) => u.id).toList());
-
-        final newTask = TasksCompanion(
-          id: drift.Value(const Uuid().v4()),
-          projectId: drift.Value(projectId),
-          name: drift.Value(nameController.text),
-          priority: drift.Value(priority.value),
-          startDate: drift.Value(startDate.value),
-          endDate: drift.Value(deadline.value),
-          progress: const drift.Value(0),
-          assigneesJson: drift.Value(idsJson),
-          milestonesJson: const drift.Value('[]'),
-          approvalStatus: const drift.Value('pending_creation'),
-          taskType: const drift.Value('routine'),
-        );
-        await ref.read(projectRepositoryProvider).createTask(newTask);
-        if (context.mounted) Navigator.pop(context);
-      },
-      createLabel: "Create Routine",
-      buttonColor: Colors.blue.shade700,
     );
   }
 }

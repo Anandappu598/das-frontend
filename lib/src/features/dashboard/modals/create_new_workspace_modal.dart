@@ -1256,7 +1256,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                 color: Colors.grey.shade600)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),

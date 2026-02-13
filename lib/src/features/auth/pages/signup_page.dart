@@ -220,7 +220,7 @@ class _SignupPageState extends ConsumerState<SignupPage> {
 
                         // Role Dropdown
                         DropdownButtonFormField<UserRole>(
-                          value: _selectedRole,
+                          initialValue: _selectedRole,
                           decoration: InputDecoration(
                             labelText: 'Role',
                             prefixIcon: const Icon(Icons.person_outline),

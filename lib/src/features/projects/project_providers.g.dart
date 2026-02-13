@@ -22,12 +22,12 @@ final projectRepositoryProvider =
 );
 
 typedef ProjectRepositoryRef = AutoDisposeProviderRef<ProjectRepository>;
-String _$currentProjectHash() => r'cc55e42b30a415d741807dcbb45117706f9925ba';
+String _$currentProjectHash() => r'77965f419e9d45028680fca5ad9101a550a38c97';
 
 /// See also [currentProject].
 @ProviderFor(currentProject)
 final currentProjectProvider =
-    AutoDisposeStreamProvider<ProjectWithTasks?>.internal(
+    AutoDisposeFutureProvider<ProjectWithTasks?>.internal(
   currentProject,
   name: r'currentProjectProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -37,15 +37,15 @@ final currentProjectProvider =
   allTransitiveDependencies: null,
 );
 
-typedef CurrentProjectRef = AutoDisposeStreamProviderRef<ProjectWithTasks?>;
-String _$projectsWithTasksHash() => r'40ce247ec9bd55b08ade50aa851c7f3f847e5a3d';
+typedef CurrentProjectRef = AutoDisposeFutureProviderRef<ProjectWithTasks?>;
+String _$projectsWithTasksHash() => r'7e51faae1a49942ece5e211f2c1abab62ef21bcb';
 
 /// All projects with tasks for Activity Catalog
 ///
 /// Copied from [projectsWithTasks].
 @ProviderFor(projectsWithTasks)
 final projectsWithTasksProvider =
-    AutoDisposeStreamProvider<List<ProjectWithTasks>>.internal(
+    AutoDisposeFutureProvider<List<ProjectWithTasks>>.internal(
   projectsWithTasks,
   name: r'projectsWithTasksProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -56,7 +56,7 @@ final projectsWithTasksProvider =
 );
 
 typedef ProjectsWithTasksRef
-    = AutoDisposeStreamProviderRef<List<ProjectWithTasks>>;
+    = AutoDisposeFutureProviderRef<List<ProjectWithTasks>>;
 String _$pendingProjectsHash() => r'68f30823de1a41b52ef92f5e194186e317cf70a1';
 
 /// See also [pendingProjects].

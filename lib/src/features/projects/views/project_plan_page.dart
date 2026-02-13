@@ -200,8 +200,8 @@ class _ProjectPlanView extends HookConsumerWidget {
 
     // Plan: Green for progress (always), Blue for checks
     // We use a nice Green for the bar, and Blue for the checkboxes
-    final progressBarColor = const Color(0xFF22C55E);
-    final checkboxColor = Colors.blue;
+    const progressBarColor = Color(0xFF22C55E);
+    const checkboxColor = Colors.blue;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),

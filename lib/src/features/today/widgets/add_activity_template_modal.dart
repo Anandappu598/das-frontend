@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
-import 'package:project_pm/src/core/database/database.dart';
-import 'package:project_pm/src/core/database/database_provider.dart';
+import 'package:project_pm/src/features/today/models/catalog_model.dart';
+import 'package:project_pm/src/features/today/services/catalog_service.dart';
 
 /// Modal for adding new activity templates
-/// Matches React AddActivityTemplateModal design
+/// Connects to backend catalog API
 class AddActivityTemplateModal extends HookConsumerWidget {
   final List<String> existingCategories;
 
@@ -23,41 +21,27 @@ class AddActivityTemplateModal extends HookConsumerWidget {
     final newCategoryController = useTextEditingController();
     final duration = useState(60);
     final selectedCategory = useState(
-        existingCategories.isNotEmpty ? existingCategories.first : 'General');
+        existingCategories.isNotEmpty ? existingCategories.first : 'COURSE');
     final isNewCategory = useState(false);
     final isSubmitting = useState(false);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final formKey = useMemoized(() => GlobalKey<FormState>());
+    final catalogService = ref.read(catalogServiceProvider);
 
     Future<void> handleSubmit() async {
-      debugPrint('=== SUBMIT BUTTON CLICKED ===');
+      if (isSubmitting.value) return;
 
-      if (isSubmitting.value) {
-        debugPrint('Already submitting, returning...');
-        return; // Prevent double submission
-      }
-
-      debugPrint('Validating form...');
-      final isValid = formKey.currentState?.validate() ?? false;
-      debugPrint('Form validation result: $isValid');
-
-      if (!isValid) {
-        debugPrint('Form validation failed!');
+      if (!(formKey.currentState?.validate() ?? false)) {
         return;
       }
 
       final name = nameController.text.trim();
       final finalCategory = isNewCategory.value
-          ? newCategoryController.text.trim()
+          ? newCategoryController.text.trim().toUpperCase()
           : selectedCategory.value;
 
-      debugPrint('Name value: "$name"');
-      debugPrint('Final category: "$finalCategory"');
-      debugPrint('Is new category: ${isNewCategory.value}');
-
       if (name.isEmpty || finalCategory.isEmpty) {
-        debugPrint('Name or category is empty!');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please fill in all required fields'),
@@ -70,60 +54,20 @@ class AddActivityTemplateModal extends HookConsumerWidget {
       isSubmitting.value = true;
 
       try {
-        debugPrint('Starting template creation...');
-        debugPrint('Name: $name');
-        debugPrint('Category: $finalCategory');
-        debugPrint('Duration: ${duration.value}');
+        debugPrint('Creating catalog: $name ($finalCategory)');
 
-        final db = ref.read(databaseProvider);
-        final templateId = const Uuid().v4();
-
-        debugPrint('Database instance: $db');
-
-        // Test database connection first
-        debugPrint('Testing database connection...');
-        try {
-          final testResult =
-              await db.customSelect('SELECT 1 as test').get().timeout(
-            const Duration(seconds: 2),
-            onTimeout: () {
-              debugPrint('Database connection test TIMED OUT!');
-              throw Exception('Database not responding');
-            },
-          );
-          debugPrint('Database connection OK: ${testResult.length} rows');
-        } catch (e) {
-          debugPrint('Database connection test FAILED: $e');
-          throw Exception('Database connection failed: $e');
-        }
-
-        final newTemplate = ActivityTemplatesCompanion.insert(
-          id: templateId,
+        final request = CreateCatalogRequest(
           name: name,
-          category: finalCategory,
-          defaultDuration: drift.Value(duration.value),
-          description: drift.Value(descriptionController.text.trim()),
-          status: const drift.Value('approved'),
-          isSystem: const drift.Value(false),
+          description: descriptionController.text.trim(),
+          catalogType: finalCategory,
+          isActive: true,
         );
 
-        debugPrint('Inserting template with ID: $templateId');
-        debugPrint('Template companion: $newTemplate');
-
-        // Add timeout to detect hanging
-        await db.into(db.activityTemplates).insert(newTemplate).timeout(
-          const Duration(seconds: 5),
-          onTimeout: () {
-            debugPrint('DATABASE INSERT TIMED OUT!');
-            throw Exception(
-                'Database insert timed out - check database connection');
-          },
-        );
-
-        debugPrint('Template inserted successfully!');
+        final createdCatalog = await catalogService.createCatalog(request);
+        debugPrint('Catalog created successfully: ${createdCatalog.id}');
 
         if (context.mounted) {
-          Navigator.of(context).pop(); // Close dialog
+          Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Template "$name" created successfully'),
@@ -132,9 +76,8 @@ class AddActivityTemplateModal extends HookConsumerWidget {
             ),
           );
         }
-      } catch (e, stackTrace) {
-        debugPrint('Error creating template: $e');
-        debugPrint('Stack trace: $stackTrace');
+      } catch (e) {
+        debugPrint('Error creating catalog: $e');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

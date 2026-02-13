@@ -5,6 +5,8 @@ import '../../core/database/database.dart';
 import '../../core/database/database_provider.dart';
 import 'project_repository.dart';
 import '../../core/models/project_with_tasks.dart';
+import 'providers/api_providers.dart';
+import 'models/task_model.dart';
 
 part 'project_providers.g.dart';
 
@@ -50,34 +52,89 @@ ProjectRepository projectRepository(ProjectRepositoryRef ref) {
 }
 
 @riverpod
-Stream<ProjectWithTasks?> currentProject(CurrentProjectRef ref) {
+Future<ProjectWithTasks?> currentProject(CurrentProjectRef ref) async {
   if (kIsWeb) {
-    final selectedId = ref.watch(selectedProjectIdProvider);
-    if (_mockProjects.isEmpty) return Stream.value(null);
-    if (selectedId == null) {
-      return Stream.value(_mockProjects.first);
-    }
     try {
-      return Stream.value(
-          _mockProjects.firstWhere((p) => p.project.id == selectedId));
-    } catch (_) {
-      return Stream.value(_mockProjects.first);
+      final projectsWithTasks =
+          await ref.watch(projectsWithTasksProvider.future);
+      final selectedId = ref.watch(selectedProjectIdProvider);
+
+      if (projectsWithTasks.isEmpty) return null;
+
+      if (selectedId == null) {
+        return projectsWithTasks.first;
+      }
+
+      try {
+        return projectsWithTasks.firstWhere((p) => p.project.id == selectedId);
+      } catch (_) {
+        return projectsWithTasks.first;
+      }
+    } catch (e) {
+      // Fallback to mock data
+      final selectedId = ref.watch(selectedProjectIdProvider);
+      if (_mockProjects.isEmpty) return null;
+      if (selectedId == null) {
+        return _mockProjects.first;
+      }
+      try {
+        return _mockProjects.firstWhere((p) => p.project.id == selectedId);
+      } catch (_) {
+        return _mockProjects.first;
+      }
     }
   }
 
   final selectedId = ref.watch(selectedProjectIdProvider);
   if (selectedId == null) {
     // Default to first project if none selected
-    return ref.watch(projectRepositoryProvider).watchProject('project-1');
+    return ref.watch(projectRepositoryProvider).watchProject('project-1').first;
   }
-  return ref.watch(projectRepositoryProvider).watchProject(selectedId);
+  return ref.watch(projectRepositoryProvider).watchProject(selectedId).first;
 }
 
 /// All projects with tasks for Activity Catalog
 @riverpod
-Stream<List<ProjectWithTasks>> projectsWithTasks(ProjectsWithTasksRef ref) {
-  if (kIsWeb) return Stream.value(_mockProjects);
-  return ref.watch(projectRepositoryProvider).watchAllProjects();
+Future<List<ProjectWithTasks>> projectsWithTasks(
+    ProjectsWithTasksRef ref) async {
+  if (kIsWeb) {
+    try {
+      // Fetch projects and tasks from API
+      final projects = await ref.watch(apiProjectsProvider.future);
+      final tasks = await ref.watch(apiTasksProvider.future);
+
+      // Group tasks by project ID
+      final Map<int, List<TaskModel>> tasksByProject = {};
+      for (final task in tasks) {
+        tasksByProject.putIfAbsent(task.project, () => []).add(task);
+      }
+
+      // Convert to ProjectWithTasks
+      final List<ProjectWithTasks> result = [];
+      for (final project in projects) {
+        final projectTasks = tasksByProject[project.id] ?? [];
+        final localProject = project.toLocalProject();
+
+        final tasksWithAssignees = projectTasks.map((task) {
+          return TaskWithAssignees(
+            task: task.toLocalTask(localProject.id),
+            assignees: [],
+          );
+        }).toList();
+
+        result.add(ProjectWithTasks(
+          project: localProject,
+          tasks: tasksWithAssignees,
+        ));
+      }
+
+      return result;
+    } catch (e) {
+      // Fallback to mock data if API fails
+      return _mockProjects;
+    }
+  }
+  return ref.watch(projectRepositoryProvider).watchAllProjects().first;
 }
 
 @riverpod
