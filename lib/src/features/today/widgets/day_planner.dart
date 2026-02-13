@@ -231,7 +231,7 @@ class DayPlanner extends HookConsumerWidget {
                           items: plannedItems
                               .where((i) => i.quadrant == 'Q1')
                               .toList(),
-                          apiItems: [],
+                          apiItems: const [],
                           isFinalized: isFinalized,
                           logId: log.id,
                           isGrouped: true),
@@ -252,7 +252,7 @@ class DayPlanner extends HookConsumerWidget {
                           items: plannedItems
                               .where((i) => i.quadrant == 'Q2')
                               .toList(),
-                          apiItems: [],
+                          apiItems: const [],
                           isFinalized: isFinalized,
                           logId: log.id,
                           isGrouped: true),
@@ -273,7 +273,7 @@ class DayPlanner extends HookConsumerWidget {
                           items: plannedItems
                               .where((i) => i.quadrant == 'Q3')
                               .toList(),
-                          apiItems: [],
+                          apiItems: const [],
                           isFinalized: isFinalized,
                           logId: log.id,
                           isGrouped: true),
@@ -294,7 +294,7 @@ class DayPlanner extends HookConsumerWidget {
                           items: plannedItems
                               .where((i) => i.quadrant == 'Q4')
                               .toList(),
-                          apiItems: [],
+                          apiItems: const [],
                           isFinalized: isFinalized,
                           logId: log.id,
                           isGrouped: true),
@@ -315,7 +315,7 @@ class DayPlanner extends HookConsumerWidget {
                           items: plannedItems
                               .where((i) => i.quadrant == 'Q1')
                               .toList(),
-                          apiItems: [],
+                          apiItems: const [],
                           isFinalized: isFinalized,
                           logId: log.id,
                           isGrouped: true),
@@ -336,7 +336,7 @@ class DayPlanner extends HookConsumerWidget {
                           items: plannedItems
                               .where((i) => i.quadrant == 'Q2')
                               .toList(),
-                          apiItems: [],
+                          apiItems: const [],
                           isFinalized: isFinalized,
                           logId: log.id,
                           isGrouped: true),
@@ -357,7 +357,7 @@ class DayPlanner extends HookConsumerWidget {
                           items: plannedItems
                               .where((i) => i.quadrant == 'Q3')
                               .toList(),
-                          apiItems: [],
+                          apiItems: const [],
                           isFinalized: isFinalized,
                           logId: log.id,
                           isGrouped: true),
@@ -378,7 +378,7 @@ class DayPlanner extends HookConsumerWidget {
                           items: plannedItems
                               .where((i) => i.quadrant == 'Q4')
                               .toList(),
-                          apiItems: [],
+                          apiItems: const [],
                           isFinalized: isFinalized,
                           logId: log.id,
                           isGrouped: true),
@@ -827,7 +827,7 @@ class _InboxBox extends ConsumerWidget {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Added \"${data['name']}\" to inbox'),
+                    content: Text('Added "${data['name']}" to inbox'),
                     backgroundColor: Colors.green,
                   ),
                 );

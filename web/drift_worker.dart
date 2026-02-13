@@ -7,6 +7,7 @@ void main() {
       name: 'pm_database',
       web: DriftWebOptions(
         sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+        driftWorker: Uri.parse('drift_worker.js'),
       ),
     );
   });

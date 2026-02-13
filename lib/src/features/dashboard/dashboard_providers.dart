@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_repository.dart';
 import 'package:project_pm/src/features/dashboard/dashboard_service.dart';
-import '../../core/database/database.dart';
 import '../../core/database/database_provider.dart';
 import '../../core/models/project_with_tasks.dart';
+import '../projects/providers/api_providers.dart';
 
 part 'dashboard_providers.g.dart';
 
@@ -18,137 +19,75 @@ DashboardRepository dashboardRepository(DashboardRepositoryRef ref) {
 Future<List<ProjectWithTasks>> dashboardProjects(
     DashboardProjectsRef ref) async {
   if (kIsWeb) {
-    // Return mock projects for web
-    return [
-      ProjectWithTasks(
-        project: const Project(
-          id: 'p1',
-          name: 'Web Demo Project',
-          context: 'This is a demo project for the web version.',
-          status: 'active',
-          approvalStatus: null,
-        ),
-        tasks: [
-          TaskWithAssignees(
-            task: Task(
-              id: 't1',
-              name: 'Demo Task',
-              projectId: 'p1',
-              progress: 50,
-              priority: 'High',
-              startDate: DateTime.now(),
-              endDate: DateTime.now().add(const Duration(days: 2)),
-              assigneesJson: '[]',
-              milestonesJson: '[]',
-              approvalStatus: null,
-              githubLink: null,
-              figmaLink: null,
-              taskType: 'standard',
-            ),
-            assignees: [], // Single user (implicit "My Project")
-          ),
-        ],
-      ),
-      ProjectWithTasks(
-        project: const Project(
-          id: 'p2',
-          name: 'E-Commerce Revamp',
-          context: 'Overhauling the main store frontend.',
-          status: 'active',
-          approvalStatus: null,
-        ),
-        tasks: [
-          TaskWithAssignees(
-            task: Task(
-              id: 't2',
-              name: 'Design System',
-              projectId: 'p2',
-              progress: 80,
-              priority: 'Critical',
-              startDate: DateTime.now().subtract(const Duration(days: 5)),
-              endDate: DateTime.now().add(const Duration(days: 10)),
-              assigneesJson: '[]',
-              milestonesJson: '[]',
-              approvalStatus: null,
-              githubLink: null,
-              figmaLink: null,
-              taskType: 'standard',
-            ),
-            assignees: [
-              // Multiple assignees make this a "Team Project"
-              const User(
-                id: 'u1',
-                name: 'Alice',
-                email: 'alice@example.com',
-                role: 'admin',
-                avatarUrl: '', // Empty to use initials and avoid network error
-                reportingManagerId: null,
-                department: null,
-              ),
-              const User(
-                id: 'u2',
-                name: 'Bob',
-                email: 'bob@example.com',
-                role: 'user',
-                avatarUrl: '', // Empty to use initials and avoid network error
-                reportingManagerId: null,
-                department: null,
-              ),
-            ],
-          ),
-        ],
-      ),
-      ProjectWithTasks(
-        project: const Project(
-          id: 'p3',
-          name: 'Mobile App Launch',
-          context: 'Preparing for iOS and Android release.',
-          status: 'completed',
-          approvalStatus: null,
-        ),
-        tasks: [
-          TaskWithAssignees(
-            task: Task(
-              id: 't3',
-              name: 'Beta Testing',
-              projectId: 'p3',
-              progress: 100,
-              priority: 'Medium',
-              startDate: DateTime.now().subtract(const Duration(days: 20)),
-              endDate: DateTime.now().subtract(const Duration(days: 2)),
-              assigneesJson: '[]',
-              milestonesJson: '[]',
-              approvalStatus: null,
-              githubLink: null,
-              figmaLink: null,
-              taskType: 'standard',
-            ),
-            assignees: [
-              const User(
-                id: 'u2',
-                name: 'Bob',
-                email: 'bob@example.com',
-                role: 'user',
-                avatarUrl: '',
-                reportingManagerId: null,
-                department: null,
-              ),
-              const User(
-                id: 'u3',
-                name: 'Charlie',
-                email: 'charlie@example.com',
-                role: 'user',
-                avatarUrl: '',
-                reportingManagerId: null,
-                department: null,
-              ),
-            ],
-          ),
-        ],
-      ),
-    ];
+    // Fetch real data from API for web
+    try {
+      final apiProjects = await ref.watch(apiProjectsProvider.future);
+      final apiTasks = await ref.watch(apiTasksProvider.future);
+
+      // Group tasks by project
+      final projectsWithTasks = <ProjectWithTasks>[];
+
+      for (final apiProject in apiProjects) {
+        // Convert API project to local Project model
+        final project = apiProject.toLocalProject();
+
+        // Find all tasks for this project
+        final projectTasks = apiTasks
+            .where((task) => task.project == apiProject.id)
+            .map((apiTask) {
+          final localTask = apiTask.toLocalTask(project.id);
+          return TaskWithAssignees(
+            task: localTask,
+            assignees: [], // Empty assignees for now
+          );
+        }).toList();
+
+        projectsWithTasks.add(ProjectWithTasks(
+          project: project,
+          tasks: projectTasks,
+        ));
+      }
+
+      return projectsWithTasks;
+    } catch (e) {
+      print('Error fetching projects from API: $e');
+      // Return empty list on error
+      return [];
+    }
   }
   return ref.watch(dashboardRepositoryProvider).fetchProjectsWithTasks();
+}
+
+/// Selected user ID for project work statistics
+final selectedStatsUserIdProvider = StateProvider<int?>((ref) => null);
+
+/// Provider for fetching users list for stats dropdown
+@riverpod
+Future<List<dynamic>> usersForStats(UsersForStatsRef ref) async {
+  final apiService = ref.watch(taskApiServiceProvider);
+  try {
+    return await apiService.getUsersForStats();
+  } catch (e) {
+    print('Error fetching users for stats: $e');
+    return [];
+  }
+}
+
+/// Provider for fetching project work statistics
+@riverpod
+Future<Map<String, dynamic>> projectWorkStats(ProjectWorkStatsRef ref) async {
+  final selectedUserId = ref.watch(selectedStatsUserIdProvider);
+  if (selectedUserId == null) {
+    return {'projects': [], 'user': null};
+  }
+
+  final apiService = ref.watch(taskApiServiceProvider);
+  try {
+    return await apiService.getProjectWorkStats(userId: selectedUserId);
+  } catch (e) {
+    print('Error fetching project work stats: $e');
+    return {'projects': [], 'user': null};
+  }
 }
 
 @riverpod

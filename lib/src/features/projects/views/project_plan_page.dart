@@ -3,6 +3,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
+import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:project_pm/src/core/models/project_with_tasks.dart';
 import 'package:project_pm/src/core/models/milestone.dart';
 
@@ -363,54 +364,108 @@ class _ProjectPlanView extends HookConsumerWidget {
   }
 
   void _toggleMilestone(BuildContext context, WidgetRef ref, dynamic task,
-      List<Milestone> milestones, Milestone m) {
-    // Toggle logic
-    final updatedMilestones = milestones.map((item) {
-      if (item.id == m.id) {
-        // Toggle
-        return Milestone(
+      List<Milestone> milestones, Milestone m) async {
+    try {
+      // Extract subtask ID from milestone ID (format: "milestone_123")
+      final subtaskId = int.tryParse(m.id.replaceFirst('milestone_', ''));
+
+      if (subtaskId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid milestone ID'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Call API to toggle subtask completion
+      final apiService = ref.read(taskApiServiceProvider);
+      final response = await apiService.toggleSubtaskCompletion(subtaskId);
+
+      // Extract updated subtask and progress from response
+      final updatedSubtask = response['subtask'];
+      final newProgress = response['parent_task_progress'] as int;
+
+      print('Subtask toggled. New task progress: $newProgress');
+
+      // Update local milestones for immediate UI feedback
+      final updatedMilestones = milestones.map((item) {
+        if (item.id == m.id) {
+          return Milestone(
             id: item.id,
             name: item.name,
-            completed: !item.completed,
-            weight: item.weight);
-      }
-      return item;
-    }).toList();
-
-    ref
-        .read(projectRepositoryProvider)
-        .updateTaskMilestones(task.id, updatedMilestones);
-
-    // Completion Check
-    final allComplete = updatedMilestones.every((m) => m.completed);
-    if (!m.completed && allComplete) {
-      // We just checked the last one
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text("Mark Task as Complete?"),
-            content: const Text(
-                "All milestones for this task are now complete. Do you want to mark the entire task as complete?"),
-            actions: <Widget>[
-              TextButton(
-                child: const Text("Cancel"),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-              TextButton(
-                child: const Text("Complete Task"),
-                onPressed: () {
-                  ref
-                      .read(projectRepositoryProvider)
-                      .requestTaskCompletion(task.id);
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
+            completed: updatedSubtask['status'] == 'DONE',
+            weight: item.weight,
           );
-        },
+        }
+        return item;
+      }).toList();
+
+      // Try to update local database (non-critical)
+      try {
+        await ref.read(projectRepositoryProvider).updateTaskMilestones(
+            task.id, updatedMilestones,
+            progressFromBackend: newProgress);
+      } catch (dbError) {
+        print('Local DB update failed (non-critical): $dbError');
+      }
+
+      // Force refresh API providers to get updated data from backend immediately
+      ref.refresh(apiTasksProvider);
+      ref.refresh(apiProjectsProvider);
+
+      // Show success feedback
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Milestone updated successfully - Progress: $newProgress%'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+
+      // Check if all milestones are now complete
+      final allComplete = updatedMilestones.every((m) => m.completed);
+      if (!m.completed && allComplete) {
+        // We just checked the last one
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text("Mark Task as Complete?"),
+              content: const Text(
+                  "All milestones for this task are now complete. Do you want to mark the entire task as complete?"),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text("Cancel"),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: const Text("Complete Task"),
+                  onPressed: () {
+                    ref
+                        .read(projectRepositoryProvider)
+                        .requestTaskCompletion(task.id);
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      print('Error toggling milestone: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update milestone: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
