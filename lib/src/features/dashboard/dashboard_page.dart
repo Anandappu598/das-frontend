@@ -313,7 +313,7 @@ class DashboardPage extends HookConsumerWidget {
                     ),
                   ),
 
-                // 3. Overview Stats
+                // 3. Overview Stats - Show metrics based on selected project type
                 ProjectOverviewStats(projects: filteredProjects),
 
                 const SizedBox(height: 12),
@@ -396,7 +396,6 @@ class DashboardPage extends HookConsumerWidget {
                               child: SizedBox(
                                 height: 250,
                                 child: WorkStatisticsChart(
-                                  projects: projectsAfterSearchList,
                                   selectedStatus: selectedStatusFilter.value,
                                   onStatusSelected: (status) {
                                     selectedStatusFilter.value = status;
@@ -427,7 +426,6 @@ class DashboardPage extends HookConsumerWidget {
                               child: SizedBox(
                                 height: 300,
                                 child: WorkStatisticsChart(
-                                  projects: projectsAfterSearchList,
                                   selectedStatus: selectedStatusFilter.value,
                                   onStatusSelected: (status) {
                                     selectedStatusFilter.value = status;

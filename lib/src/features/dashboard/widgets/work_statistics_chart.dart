@@ -1,71 +1,72 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:project_pm/src/core/database/database.dart';
-import 'package:project_pm/src/core/models/project_with_tasks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
 
-class WorkStatisticsChart extends StatefulWidget {
-  final List<ProjectWithTasks> projects;
+class WorkStatisticsChart extends HookConsumerWidget {
   final String? selectedStatus;
   final Function(String?)? onStatusSelected;
 
   const WorkStatisticsChart({
     super.key,
-    required this.projects,
     this.selectedStatus,
     this.onStatusSelected,
   });
 
   @override
-  State<WorkStatisticsChart> createState() => _WorkStatisticsChartState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final usersAsync = ref.watch(usersForStatsProvider);
+    final statsAsync = ref.watch(projectWorkStatsProvider);
+    final selectedUserId = ref.watch(selectedStatsUserIdProvider);
 
-class _WorkStatisticsChartState extends State<WorkStatisticsChart> {
-  int touchedIndex = -1;
-  User? selectedUser;
+    return usersAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) =>
+          Center(child: Text('Error loading users: $error')),
+      data: (users) {
+        if (users.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Text(
+                'No users available for statistics',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          );
+        }
 
-  @override
-  void didUpdateWidget(WorkStatisticsChart oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.projects != widget.projects) {
-      // Reset or re-validate selected user if projects change
-    }
+        // Auto-select first user if none selected
+        if (selectedUserId == null && users.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(selectedStatsUserIdProvider.notifier).state =
+                users.first['id'] as int;
+          });
+        }
+
+        return statsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) =>
+              Center(child: Text('Error loading stats: $error')),
+          data: (stats) => _buildChart(
+              context, ref, users.cast<Map<String, dynamic>>(), stats),
+        );
+      },
+    );
   }
 
-  List<User> _getUsers() {
-    final users = <String, User>{};
-    for (var project in widget.projects) {
-      for (var task in project.tasks) {
-        for (var assignee in task.assignees) {
-          users[assignee.id] = assignee;
-        }
-      }
-    }
-    return users.values.toList()..sort((a, b) => a.name.compareTo(b.name));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final users = _getUsers();
-
-    // Default to first user if none selected, or keep selected if valid
-    if (users.isNotEmpty &&
-        (selectedUser == null || !users.contains(selectedUser))) {
-      // Try to find a user that matches current selectedUser id if possible, otherwise first
-      try {
-        if (selectedUser != null) {
-          selectedUser = users.firstWhere((u) => u.id == selectedUser!.id);
-        } else {
-          selectedUser = users.first;
-        }
-      } catch (_) {
-        selectedUser = users.first;
-      }
-    }
-
-    // Calculate stats for selected user by PROJECT
-    final Map<String, int> projectCounts = {};
-    final Map<String, Color> projectColors = {};
-    int totalTasks = 0;
+  Widget _buildChart(
+    BuildContext context,
+    WidgetRef ref,
+    List<Map<String, dynamic>> users,
+    Map<String, dynamic> stats,
+  ) {
+    final selectedUserId = ref.watch(selectedStatsUserIdProvider);
+    final projects = stats['projects'] as List<dynamic>? ?? [];
+    final overallPercentage = stats['overall_completion_percentage'] ?? 0;
+    final totalTasks = stats['total_tasks'] ?? 0;
+    final completedTasks = stats['completed_tasks'] ?? 0;
+    // User data available at: stats['user'] as Map<String, dynamic>?
 
     // Define a palette for projects
     final List<Color> palette = [
@@ -79,318 +80,309 @@ class _WorkStatisticsChartState extends State<WorkStatisticsChart> {
       Colors.amber,
     ];
 
-    if (selectedUser != null) {
-      int colorIndex = 0;
-      for (var p in widget.projects) {
-        final userTasks = p.tasks
-            .where((t) => t.assignees.any((u) => u.id == selectedUser!.id));
+    // Calculate project stats
+    final Map<String, int> projectCounts = {};
+    final Map<String, Color> projectColors = {};
 
-        if (userTasks.isNotEmpty) {
-          projectCounts[p.project.name] = userTasks.length;
-          // Assign stable color based on project hash or simple index
-          projectColors[p.project.name] = palette[colorIndex % palette.length];
-          colorIndex++;
-          totalTasks += userTasks.length;
-        }
+    int colorIndex = 0;
+    for (var project in projects) {
+      final projectName = project['name'] as String;
+      final taskCount = project['total_tasks'] as int;
+
+      if (taskCount > 0) {
+        projectCounts[projectName] = taskCount;
+        projectColors[projectName] = palette[colorIndex % palette.length];
+        colorIndex++;
       }
     }
 
-    final isAdmin = selectedUser?.role.toLowerCase() == 'admin';
-
-    // Admin View Logic: Show 100% Total (Only if no tasks, otherwise treat as normal user)
-    // The user previously requested specific Admin view, but now wants project breakdown.
-    // If Admin has NO tasks, show the placeholder. If they have tasks, show the breakdown.
-    if (isAdmin && totalTasks == 0) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeader(users),
-          const SizedBox(height: 20),
-          Expanded(
-            child: Stack(
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                PieChart(
-                  PieChartData(
-                    sectionsSpace: 0,
-                    centerSpaceRadius: 40,
-                    sections: [
-                      PieChartSectionData(
-                        color: Colors.grey.shade100,
-                        value: 100,
-                        title: '',
-                        radius: 50,
-                        showTitle: false,
-                      ),
-                    ],
-                  ),
+                const Text(
+                  "Project Work Stats",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        "100%",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                      Text(
-                        "TOTAL",
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade500,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
+                // User Dropdown
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: selectedUserId,
+                      hint: const Text('Select User'),
+                      items: users.map((user) {
+                        return DropdownMenuItem<int>(
+                          value: user['id'] as int,
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person,
+                                  size: 16, color: Colors.grey),
+                              const SizedBox(width: 8),
+                              Text(user['name'] as String),
+                              const SizedBox(width: 8),
+                              Text(
+                                '(${user['role_display']})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          ref.read(selectedStatsUserIdProvider.notifier).state =
+                              value;
+                        }
+                      },
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          Center(
-              child: Text("No tasks assigned to this user.",
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12))),
-        ],
-      );
-    }
-
-    // Normal User View (or Admin with tasks)
-    if (totalTasks == 0) {
-      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _buildHeader(users),
-        const Spacer(),
-        const Center(child: Text("No tasks found")),
-        const Spacer(),
-      ]);
-    }
-
-    // Convert map to list for iteration (ensure consistent order)
-    final projectStats = projectCounts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value)); // Sort by count desc
-
-    return Column(
-      children: [
-        _buildHeader(users),
-        const SizedBox(height: 16),
-        Expanded(
-          child: Stack(
-            children: [
-              PieChart(
-                PieChartData(
-                  pieTouchData: PieTouchData(
-                    touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                      if (!event.isInterestedForInteractions ||
-                          pieTouchResponse == null ||
-                          pieTouchResponse.touchedSection == null) {
-                        setState(() {
-                          touchedIndex = -1;
-                        });
-                        return;
-                      }
-                      setState(() {
-                        touchedIndex = pieTouchResponse
-                            .touchedSection!.touchedSectionIndex;
-                      });
-                    },
+            const SizedBox(height: 20),
+            if (projects.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(40.0),
+                  child: Text(
+                    'No projects handled by this user',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
-                  borderData: FlBorderData(show: false),
-                  sectionsSpace: 0,
-                  centerSpaceRadius: 40,
-                  sections: _buildChartSections(
-                      projectStats, projectColors, totalTasks),
                 ),
-              ),
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      touchedIndex == -1 || touchedIndex >= projectStats.length
-                          ? "100%"
-                          : "${((projectStats[touchedIndex].value / totalTasks) * 100).toInt()}%",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: Text(
-                        touchedIndex == -1 ||
-                                touchedIndex >= projectStats.length
-                            ? "Total"
-                            : projectStats[touchedIndex].key,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey.shade500,
-                            fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Legend Header
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text("PROJECT",
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey)),
-              Row(
-                children: [
-                  Text("TASKS", // Changed from HOURS as we are counting tasks
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey)),
-                  SizedBox(width: 24),
-                  Text("%",
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey)),
-                ],
               )
-            ],
-          ),
-        ),
-        const Divider(),
-        Expanded(
-          child: ListView.builder(
-            itemCount: projectStats.length,
-            padding: EdgeInsets.zero,
-            itemBuilder: (context, index) {
-              final entry = projectStats[index];
-              return _LegendRow(
-                color: projectColors[entry.key]!,
-                label: entry.key,
-                count: entry.value,
-                total: totalTasks,
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+            else
+              Column(
+                children: [
+                  // Overall completion percentage
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Overall Completion',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$overallPercentage%',
+                              style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Completed: $completedTasks/$totalTasks tasks',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            Text(
+                              'Projects: ${projects.length}',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-  Widget _buildHeader(List<User> users) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Project Work Stats",
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            if (selectedUser != null)
-              Text("Member: ${selectedUser!.name}",
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                  // Pie Chart
+                  if (projectCounts.isNotEmpty)
+                    SizedBox(
+                      height: 200,
+                      child: PieChart(
+                        PieChartData(
+                          sections: projectCounts.entries.map((entry) {
+                            final percentage =
+                                (entry.value / totalTasks * 100).round();
+                            return PieChartSectionData(
+                              color: projectColors[entry.key],
+                              value: entry.value.toDouble(),
+                              title: '$percentage%',
+                              radius: 80,
+                              titleStyle: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            );
+                          }).toList(),
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 40,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 24),
+
+                  // Legend
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: projectCounts.entries.map((entry) {
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: projectColors[entry.key],
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${entry.key} (${entry.value})',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Project Details Table
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        // Header
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(8),
+                              topRight: Radius.circular(8),
+                            ),
+                          ),
+                          child: const Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Text(
+                                  'Project Name',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Total',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Done',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Pending',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Progress',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Rows
+                        ...projects.map((project) {
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(color: Colors.grey.shade300),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(project['name'] as String),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    '${project['total_tasks']}',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    '${project['completed_tasks']}',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: Colors.green),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    '${project['pending_tasks']}',
+                                    textAlign: TextAlign.center,
+                                    style:
+                                        const TextStyle(color: Colors.orange),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    '${project['completion_percentage']}%',
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
-        if (users.isNotEmpty)
-          DropdownButtonHideUnderline(
-            child: Container(
-              height: 32,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: DropdownButton<User>(
-                value: selectedUser,
-                icon: const Icon(Icons.keyboard_arrow_down, size: 16),
-                style: const TextStyle(fontSize: 12, color: Colors.black87),
-                onChanged: (User? newValue) {
-                  setState(() {
-                    selectedUser = newValue;
-                  });
-                },
-                items: users.map<DropdownMenuItem<User>>((User user) {
-                  return DropdownMenuItem<User>(
-                    value: user,
-                    child: Text(user.name),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  List<PieChartSectionData> _buildChartSections(
-      List<MapEntry<String, int>> stats, Map<String, Color> colors, int total) {
-    return List.generate(stats.length, (i) {
-      final isTouched = i == touchedIndex;
-      final entry = stats[i];
-      final radius = isTouched ? 50.0 : 40.0;
-
-      return PieChartSectionData(
-        color: colors[entry.key],
-        value: entry.value.toDouble(),
-        title: '',
-        showTitle: false,
-        radius: radius,
-      );
-    });
-  }
-}
-
-class _LegendRow extends StatelessWidget {
-  final Color color;
-  final String label;
-  final int count;
-  final int total;
-
-  const _LegendRow(
-      {required this.color,
-      required this.label,
-      required this.count,
-      required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    if (count == 0) return const SizedBox.shrink();
-    final percent = (count / total * 100).toInt();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 8.0),
-      child: Row(
-        children: [
-          Container(width: 8, height: 8, color: color),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text(
-            label,
-            style: const TextStyle(fontSize: 12),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          )),
-          const SizedBox(width: 8),
-          Text("$count",
-              style:
-                  const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-          const SizedBox(width: 24),
-          SizedBox(
-            width: 32,
-            child: Text("$percent%",
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                textAlign: TextAlign.end),
-          ),
-        ],
       ),
     );
   }

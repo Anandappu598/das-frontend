@@ -116,15 +116,22 @@ Future<List<ProjectWithTasks>> projectsWithTasks(
         final localProject = project.toLocalProject();
 
         final tasksWithAssignees = projectTasks.map((task) {
+          // Convert assignees from API to local User models
+          final assignees = task.assigneesList
+                  ?.map((assigneeModel) => assigneeModel.toLocalUser())
+                  .toList() ??
+              [];
+
           return TaskWithAssignees(
             task: task.toLocalTask(localProject.id),
-            assignees: [],
+            assignees: assignees,
           );
         }).toList();
 
         result.add(ProjectWithTasks(
           project: localProject,
           tasks: tasksWithAssignees,
+          projectModel: project, // Pass the API model for date access
         ));
       }
 

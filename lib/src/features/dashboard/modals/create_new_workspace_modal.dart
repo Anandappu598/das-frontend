@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -7,7 +6,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:project_pm/src/core/database/database.dart';
 import 'package:project_pm/src/features/projects/project_providers.dart';
-import 'package:project_pm/src/core/providers/user_providers.dart';
+import 'package:project_pm/src/features/dashboard/dashboard_providers.dart';
+import 'package:project_pm/src/features/projects/providers/api_providers.dart';
 import 'package:intl/intl.dart';
 
 enum CreationStep { type, details, tasks }
@@ -42,15 +42,16 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     final selectedType = useState<WorkspaceType?>(null);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Fetch Users for Assignees
-    final allUsersAsync = ref.watch(allUsersProvider);
+    // Fetch Users for Assignees (from backend API)
+    final backendUsersAsync = ref.watch(usersForStatsProvider);
 
     // Common Controllers
     final nameController = useTextEditingController();
     final descriptionController = useTextEditingController();
 
     // Project Specific
-    final projectLeadController = useTextEditingController();
+    final projectLeadId = useState<int?>(null);
+    final usersAsync = ref.watch(usersForStatsProvider);
     final projectDeadline = useState<DateTime?>(null);
 
     // Project Date Controllers (Hoisted to avoid Hook crash)
@@ -206,7 +207,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Create New Workspace",
+                              "Create New Project",
                               style: GoogleFonts.inter(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w700,
@@ -250,7 +251,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                             selectType,
                             nameController,
                             descriptionController,
-                            projectLeadController,
+                            projectLeadId,
+                            usersAsync,
                             projectDeadline,
                             deadlineController,
                             // Task Props
@@ -264,7 +266,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                             taskAssignees,
                             taskMilestones,
                             milestoneController,
-                            allUsersAsync,
+                            backendUsersAsync,
                             // Course Props
                             subjectCodeController,
                             instructorController,
@@ -290,7 +292,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                             selectType,
                             nameController,
                             descriptionController,
-                            projectLeadController,
+                            projectLeadId,
+                            usersAsync,
                             projectDeadline,
                             deadlineController,
                             // Task Props
@@ -304,7 +307,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                             taskAssignees,
                             taskMilestones,
                             milestoneController,
-                            allUsersAsync,
+                            backendUsersAsync,
                             // Course Props
                             subjectCodeController,
                             instructorController,
@@ -337,7 +340,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     Function(WorkspaceType) onSelectType,
     TextEditingController nameController,
     TextEditingController descController,
-    TextEditingController projectLeadController,
+    ValueNotifier<int?> projectLeadId,
+    AsyncValue<List<dynamic>> usersAsync,
     ValueNotifier<DateTime?> projectDeadline,
     TextEditingController deadlineController,
     // Task Props
@@ -351,7 +355,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     ValueNotifier<List<String>> taskAssignees,
     ValueNotifier<List<String>> taskMilestones,
     TextEditingController milestoneController,
-    AsyncValue<List<User>> allUsersAsync,
+    AsyncValue<List<dynamic>> backendUsersAsync,
     // Course Props
     TextEditingController subjectCodeController,
     TextEditingController instructorController,
@@ -440,9 +444,8 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: _buildTextField(
-                        projectLeadController, "Project Lead", "e.g. John Doe",
-                        suffixIcon: Icons.person_outline_rounded),
+                    child: _buildUserDropdown(
+                        projectLeadId, usersAsync, "Project Lead", isDark),
                   ),
                   const SizedBox(width: 24),
                   Expanded(
@@ -615,7 +618,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                         ref,
                         nameController.text,
                         descController.text,
-                        projectLeadController.text,
+                        projectLeadId.value,
                         projectDeadline.value,
                         taskList.value,
                       );
@@ -652,11 +655,11 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                                   taskStartDate,
                                   taskEndDate,
                                   taskStartController,
-                                  taskEndController, // Use passed controllers
+                                  taskEndController,
                                   taskAssignees,
                                   taskMilestones,
                                   milestoneController,
-                                  allUsersAsync,
+                                  backendUsersAsync,
                                   taskList,
                                   onPickDate),
                             ),
@@ -683,7 +686,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
                               taskAssignees,
                               taskMilestones,
                               milestoneController,
-                              allUsersAsync,
+                              backendUsersAsync,
                               taskList,
                               onPickDate),
                           const SizedBox(height: 32),
@@ -710,7 +713,7 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     ValueNotifier<List<String>> taskAssignees,
     ValueNotifier<List<String>> taskMilestones,
     TextEditingController milestoneController,
-    AsyncValue<List<User>> allUsersAsync,
+    AsyncValue<List<dynamic>> backendUsersAsync,
     ValueNotifier<List<_TempTask>> taskList,
     Function(ValueNotifier<DateTime?>) onPickDate,
   ) {
@@ -724,207 +727,217 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
         border: Border.all(
             color: isDark ? Colors.grey.shade700 : Colors.grey.shade200),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Add New Task",
-              style:
-                  GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
-          const SizedBox(height: 20),
-          _buildTextField(taskNameController, "Task Name", "e.g. Setup Repo"),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDropdown(
-                  label: "Priority",
-                  value: taskPriority.value,
-                  items: ["Low", "Medium", "High"],
-                  onChanged: (val) => taskPriority.value = val!,
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTextField(
-                  taskStartController, // Use hoisted controller
-                  "Start",
-                  "Select",
-                  readOnly: true,
-                  suffixIcon: Icons.calendar_today_rounded,
-                  onTap: () => onPickDate(taskStartDate),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildTextField(
-                  taskEndController, // Use hoisted controller
-                  "End",
-                  "Select",
-                  readOnly: true,
-                  suffixIcon: Icons.calendar_today_rounded,
-                  onTap: () => onPickDate(taskEndDate),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Assignees
-          Text("Assignees",
-              style:
-                  GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          allUsersAsync.when(
-            data: (users) => DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                hintText: "Select User",
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              ),
-              items: users
-                  .map(
-                      (u) => DropdownMenuItem(value: u.id, child: Text(u.name)))
-                  .toList(),
-              onChanged: (val) {
-                if (val != null && !taskAssignees.value.contains(val)) {
-                  taskAssignees.value = [...taskAssignees.value, val];
-                }
-              },
-              dropdownColor: isDark ? const Color(0xFF374151) : Colors.white,
-            ),
-            loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const Text("Error loading users"),
-          ),
-          if (taskAssignees.value.isNotEmpty) ...[
-            const SizedBox(height: 12),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Add New Task",
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600, fontSize: 16)),
+            const SizedBox(height: 20),
+            _buildTextField(taskNameController, "Task Name", "e.g. Setup Repo"),
+            const SizedBox(height: 20),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: taskAssignees.value.map((uid) {
-                final user = allUsersAsync.valueOrNull?.firstWhere(
-                    (u) => u.id == uid,
-                    orElse: () => User(
-                        id: uid,
-                        name: 'Unknown',
-                        avatarUrl: '',
-                        email: '',
-                        role: '',
-                        department: ''));
-                return Chip(
-                  label: Text(user?.name ?? uid,
-                      style: GoogleFonts.inter(fontSize: 11)),
-                  deleteIcon: const Icon(Icons.close_rounded, size: 14),
-                  onDeleted: () {
-                    taskAssignees.value =
-                        taskAssignees.value.where((id) => id != uid).toList();
-                  },
-                  visualDensity: VisualDensity.compact,
-                  backgroundColor: isDark
-                      ? Colors.blue.withOpacity(0.2)
-                      : Colors.blue.shade50,
-                  side: BorderSide.none,
-                );
-              }).toList(),
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: 130,
+                  child: _buildDropdown(
+                    label: "Priority",
+                    value: taskPriority.value,
+                    items: ["Low", "Medium", "High"],
+                    onChanged: (val) => taskPriority.value = val!,
+                    isDark: isDark,
+                  ),
+                ),
+                SizedBox(
+                  width: 130,
+                  child: _buildTextField(
+                    taskStartController,
+                    "Start",
+                    "Select",
+                    readOnly: true,
+                    suffixIcon: Icons.calendar_today_rounded,
+                    onTap: () => onPickDate(taskStartDate),
+                  ),
+                ),
+                SizedBox(
+                  width: 130,
+                  child: _buildTextField(
+                    taskEndController,
+                    "End",
+                    "Select",
+                    readOnly: true,
+                    suffixIcon: Icons.calendar_today_rounded,
+                    onTap: () => onPickDate(taskEndDate),
+                  ),
+                ),
+              ],
             ),
-          ],
-          const SizedBox(height: 20),
+            const SizedBox(height: 20),
 
-          // Milestones
-          Text("Milestones",
-              style:
-                  GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildTextField(milestoneController, "Add Milestone",
-                    "e.g. Design Approved"),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                onPressed: () {
-                  if (milestoneController.text.isNotEmpty) {
-                    taskMilestones.value = [
-                      ...taskMilestones.value,
-                      milestoneController.text
-                    ];
-                    milestoneController.clear();
+            // Assignees (from backend API)
+            Text("Assignees",
+                style: GoogleFonts.inter(
+                    fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            backendUsersAsync.when(
+              data: (users) => DropdownButtonFormField<String>(
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  hintText: "Select User",
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                isExpanded: true,
+                items: users
+                    .map((u) => DropdownMenuItem<String>(
+                        value: u['id'].toString(),
+                        child: Text(
+                          '${u['name'] ?? u['email'] ?? 'User ${u['id']}'}',
+                          overflow: TextOverflow.ellipsis,
+                        )))
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null && !taskAssignees.value.contains(val)) {
+                    taskAssignees.value = [...taskAssignees.value, val];
                   }
                 },
-                icon: const Icon(Icons.add_circle, color: Colors.blue),
-                tooltip: "Add Milestone",
+                dropdownColor: isDark ? const Color(0xFF374151) : Colors.white,
+              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => const Text("Error loading users"),
+            ),
+            if (taskAssignees.value.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: taskAssignees.value.map((uid) {
+                  final users = backendUsersAsync.valueOrNull ?? [];
+                  final user = users
+                      .cast<Map<String, dynamic>>()
+                      .where((u) => u['id'].toString() == uid)
+                      .firstOrNull;
+                  final userName = user != null
+                      ? (user['name'] ?? user['email'] ?? 'User $uid')
+                      : 'User $uid';
+                  return Chip(
+                    label: Text(userName.toString(),
+                        style: GoogleFonts.inter(fontSize: 11)),
+                    deleteIcon: const Icon(Icons.close_rounded, size: 14),
+                    onDeleted: () {
+                      taskAssignees.value =
+                          taskAssignees.value.where((id) => id != uid).toList();
+                    },
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: isDark
+                        ? Colors.blue.withOpacity(0.2)
+                        : Colors.blue.shade50,
+                    side: BorderSide.none,
+                  );
+                }).toList(),
               ),
             ],
-          ),
-          if (taskMilestones.value.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: taskMilestones.value
-                  .map((m) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.flag_rounded,
-                                size: 14, color: Colors.orange),
-                            const SizedBox(width: 6),
-                            Text(m, style: GoogleFonts.inter(fontSize: 13)),
-                            const SizedBox(width: 8),
-                            InkWell(
-                              onTap: () {
-                                taskMilestones.value = taskMilestones.value
-                                    .where((im) => im != m)
-                                    .toList();
-                              },
-                              child: const Icon(Icons.close_rounded,
-                                  size: 14, color: Colors.red),
-                            )
-                          ],
-                        ),
-                      ))
-                  .toList(),
-            )
-          ],
+            const SizedBox(height: 20),
 
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                if (taskNameController.text.isEmpty) return;
-                final newTask = _TempTask(
-                  name: taskNameController.text,
-                  priority: taskPriority.value,
-                  startDate: taskStartDate.value,
-                  endDate: taskEndDate.value,
-                  assignees: taskAssignees.value,
-                  milestones: taskMilestones.value,
-                );
-                taskList.value = [...taskList.value, newTask];
-
-                taskNameController.clear();
-                taskPriority.value = 'Medium';
-                taskStartDate.value = null;
-                taskEndDate.value = null;
-                taskAssignees.value = [];
-                taskMilestones.value = [];
-              },
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                side: BorderSide(color: Colors.grey.shade300),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.add),
-              label: Text("Add New Task",
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            // Milestones
+            Text("Milestones",
+                style: GoogleFonts.inter(
+                    fontSize: 12, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTextField(milestoneController, "Add Milestone",
+                      "e.g. Design Approved"),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () {
+                    if (milestoneController.text.isNotEmpty) {
+                      taskMilestones.value = [
+                        ...taskMilestones.value,
+                        milestoneController.text
+                      ];
+                      milestoneController.clear();
+                    }
+                  },
+                  icon: const Icon(Icons.add_circle, color: Colors.blue),
+                  tooltip: "Add Milestone",
+                ),
+              ],
             ),
-          ),
-        ],
+            if (taskMilestones.value.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: taskMilestones.value
+                    .map((m) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.flag_rounded,
+                                  size: 14, color: Colors.orange),
+                              const SizedBox(width: 6),
+                              Text(m, style: GoogleFonts.inter(fontSize: 13)),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () {
+                                  taskMilestones.value = taskMilestones.value
+                                      .where((im) => im != m)
+                                      .toList();
+                                },
+                                child: const Icon(Icons.close_rounded,
+                                    size: 14, color: Colors.red),
+                              )
+                            ],
+                          ),
+                        ))
+                    .toList(),
+              )
+            ],
+
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  if (taskNameController.text.isEmpty) return;
+                  final newTask = _TempTask(
+                    name: taskNameController.text,
+                    priority: taskPriority.value,
+                    startDate: taskStartDate.value,
+                    endDate: taskEndDate.value,
+                    assignees: taskAssignees.value,
+                    milestones: taskMilestones.value,
+                  );
+                  taskList.value = [...taskList.value, newTask];
+
+                  taskNameController.clear();
+                  taskPriority.value = 'Medium';
+                  taskStartDate.value = null;
+                  taskEndDate.value = null;
+                  taskAssignees.value = [];
+                  taskMilestones.value = [];
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(Icons.add),
+                label: Text("Add New Task",
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1121,53 +1134,41 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
     WidgetRef ref,
     String name,
     String desc,
-    String lead,
+    int? leadId,
     DateTime? deadline,
     List<_TempTask> tasks,
   ) async {
     try {
-      final projectRepo = ref.read(projectRepositoryProvider);
-      final newId = 'proj-${DateTime.now().millisecondsSinceEpoch}';
+      final apiService = ref.read(taskApiServiceProvider);
 
-      // Persist Head/Deadline in context for now as per schema plan
-      String finalDescription = desc;
-      if (lead.isNotEmpty) finalDescription += "\n\nProject Lead: $lead";
-      if (deadline != null) {
-        finalDescription +=
-            "\nDeadline: ${DateFormat('MM/dd/yyyy').format(deadline)}";
-      }
+      // Build tasks payload matching backend's create-with-tasks endpoint
+      final tasksPayload = tasks
+          .map((t) => <String, dynamic>{
+                'name': t.name,
+                'priority': t.priority,
+                if (t.startDate != null)
+                  'start_date':
+                      '${t.startDate!.year}-${t.startDate!.month.toString().padLeft(2, '0')}-${t.startDate!.day.toString().padLeft(2, '0')}',
+                if (t.endDate != null)
+                  'end_date':
+                      '${t.endDate!.year}-${t.endDate!.month.toString().padLeft(2, '0')}-${t.endDate!.day.toString().padLeft(2, '0')}',
+                'assignees':
+                    t.assignees.map((a) => int.tryParse(a) ?? a).toList(),
+                'milestones': t.milestones,
+              })
+          .toList();
 
-      // 1. Create Project
-      await projectRepo.createProject(
-        ProjectsCompanion(
-          id: Value(newId),
-          name: Value(name),
-          context: Value(finalDescription),
-          status: const Value('active'),
-          approvalStatus: const Value('pending_creation'),
-        ),
+      await apiService.createProjectWithTasks(
+        name: name,
+        description: desc,
+        projectLead: leadId,
+        deadline: deadline,
+        tasks: tasksPayload,
       );
 
-      // 2. Create Tasks
-      for (var tempTask in tasks) {
-        final taskId =
-            'task-${DateTime.now().millisecondsSinceEpoch}-${tasks.indexOf(tempTask)}';
-        await projectRepo.createTask(
-          TasksCompanion(
-            id: Value(taskId),
-            name: Value(tempTask.name),
-            projectId: Value(newId),
-            priority: Value(tempTask.priority),
-            startDate: Value(tempTask.startDate ?? DateTime.now()),
-            endDate: Value(tempTask.endDate ??
-                DateTime.now().add(const Duration(days: 7))),
-            progress: const Value(0),
-            approvalStatus: const Value('pending_creation'),
-            assigneesJson: Value(jsonEncode(tempTask.assignees)),
-            milestonesJson: Value(jsonEncode(tempTask.milestones)),
-          ),
-        );
-      }
+      // Invalidate providers so the dashboard re-fetches from API
+      ref.invalidate(apiProjectsProvider);
+      ref.invalidate(apiTasksProvider);
 
       if (context.mounted) {
         Navigator.pop(context);
@@ -1277,6 +1278,87 @@ class CreateNewWorkspaceModal extends HookConsumerWidget {
             );
           }).toList(),
           onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUserDropdown(ValueNotifier<int?> selectedUserId,
+      AsyncValue<List<dynamic>> usersAsync, String label, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                color: Colors.grey.shade600)),
+        const SizedBox(height: 6),
+        usersAsync.when(
+          loading: () => Container(
+            height: 50,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Center(
+              child: SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ),
+          error: (error, stack) => Container(
+            height: 50,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.red.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                'Error loading users',
+                style: GoogleFonts.inter(fontSize: 14, color: Colors.red),
+              ),
+            ),
+          ),
+          data: (users) => DropdownButtonFormField<int>(
+            initialValue: selectedUserId.value,
+            decoration: InputDecoration(
+              hintText: 'Select project lead...',
+              hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Colors.blue, width: 2),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            dropdownColor: isDark ? const Color(0xFF374151) : Colors.white,
+            items: users.map<DropdownMenuItem<int>>((user) {
+              final userName = (user['name'] ?? user['email'] ?? '') as String;
+              final userRole = (user['role_display'] ?? '') as String;
+              return DropdownMenuItem<int>(
+                value: user['id'] as int,
+                child: Text(
+                  userRole.isNotEmpty ? '$userName ($userRole)' : userName,
+                  style: GoogleFonts.inter(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: (int? newValue) {
+              selectedUserId.value = newValue;
+            },
+          ),
         ),
       ],
     );

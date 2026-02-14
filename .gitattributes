@@ -1,0 +1,9 @@
+# Treat WebAssembly files as binary to prevent line ending corruption
+*.wasm binary
+*.js binary
+
+# Treat Dart files as text with LF line endings
+*.dart text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf

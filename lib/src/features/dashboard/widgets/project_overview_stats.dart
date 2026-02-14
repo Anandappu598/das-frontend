@@ -15,8 +15,7 @@ class ProjectOverviewStats extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (projects.isEmpty) return const SizedBox();
-
+    // Always show the cards, even with empty projects (display zeros)
     final totalProjects = projects.length;
     final activeProjects = projects.where((p) => p.isActive).length;
     final completedProjects = projects.where((p) => p.isCompleted).length;

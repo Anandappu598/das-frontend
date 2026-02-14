@@ -52,10 +52,11 @@ class ProjectRepository {
     }).toList();
   }
 
-  Future<void> updateTaskMilestones(
-      String taskId, List<Milestone> milestones) async {
+  Future<void> updateTaskMilestones(String taskId, List<Milestone> milestones,
+      {int? progressFromBackend}) async {
     final jsonStr = jsonEncode(milestones.map((m) => m.toJson()).toList());
-    final progress = _calculateProgress(milestones);
+    // Use backend progress if provided, otherwise calculate locally
+    final progress = progressFromBackend ?? _calculateProgress(milestones);
 
     await (_db.update(_db.tasks)..where((t) => t.id.equals(taskId))).write(
       TasksCompanion(

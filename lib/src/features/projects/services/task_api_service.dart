@@ -5,7 +5,7 @@ import '../models/catalog_model.dart';
 
 class TaskApiService {
   final Dio _dio;
-  static const String baseUrl = 'http://127.0.0.1:8001/api';
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   TaskApiService(this._dio);
 
@@ -296,6 +296,148 @@ class TaskApiService {
       throw Exception('Network error: ${e.message}');
     } catch (e) {
       print('Unexpected error fetching today plan: $e');
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Fetch users for project work statistics dropdown
+  Future<List<dynamic>> getUsersForStats() async {
+    try {
+      print(
+          'Fetching users for stats from: $baseUrl/dashboard/users_for_stats/');
+      final response = await _dio.get('$baseUrl/dashboard/users_for_stats/');
+
+      print('Response status: ${response.statusCode}');
+      print('Response data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final dynamic responseData = response.data;
+        List<dynamic> usersData;
+
+        if (responseData is List) {
+          usersData = responseData;
+        } else if (responseData is Map<String, dynamic>) {
+          if (responseData.containsKey('users')) {
+            usersData = responseData['users'] as List<dynamic>;
+          } else if (responseData.containsKey('results')) {
+            usersData = responseData['results'] as List<dynamic>;
+          } else {
+            usersData = [responseData];
+          }
+        } else {
+          throw Exception('Unexpected response format');
+        }
+
+        print('Successfully parsed ${usersData.length} users for stats');
+        return usersData;
+      } else {
+        throw Exception(
+            'Failed to load users for stats: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      print('DioException fetching users for stats: ${e.message}');
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      print('Unexpected error fetching users for stats: $e');
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Fetch project work statistics for a specific user
+  Future<Map<String, dynamic>> getProjectWorkStats({int? userId}) async {
+    try {
+      final String url = userId != null
+          ? '$baseUrl/dashboard/project_work_stats/?user_id=$userId'
+          : '$baseUrl/dashboard/project_work_stats/';
+
+      print('Fetching project work stats from: $url');
+      final response = await _dio.get(url);
+
+      print('Response status: ${response.statusCode}');
+      print('Response data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final dynamic responseData = response.data;
+
+        if (responseData is Map<String, dynamic>) {
+          print('Successfully parsed project work stats');
+          return responseData;
+        } else {
+          throw Exception('Unexpected response format - expected Map');
+        }
+      } else {
+        throw Exception(
+            'Failed to load project work stats: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      print('DioException fetching project work stats: ${e.message}');
+      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      print('Unexpected error fetching project work stats: $e');
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Create a project with tasks, assignees, and milestones in one API call
+  Future<Map<String, dynamic>> createProjectWithTasks({
+    required String name,
+    String description = '',
+    int? projectLead,
+    DateTime? deadline,
+    List<Map<String, dynamic>> tasks = const [],
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'name': name,
+        'description': description,
+      };
+      if (projectLead != null) body['project_lead'] = projectLead;
+      if (deadline != null) {
+        body['deadline'] =
+            '${deadline.year}-${deadline.month.toString().padLeft(2, '0')}-${deadline.day.toString().padLeft(2, '0')}';
+      }
+      if (tasks.isNotEmpty) body['tasks'] = tasks;
+
+      print('Creating project with tasks: $body');
+      final response = await _dio.post(
+        '$baseUrl/projects/create-with-tasks/',
+        data: body,
+      );
+
+      if (response.statusCode == 201) {
+        print('Project created successfully: ${response.data}');
+        return response.data as Map<String, dynamic>;
+      } else {
+        throw Exception('Failed to create project: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      print('DioException creating project: ${e.response?.data ?? e.message}');
+      throw Exception('Network error: ${e.response?.data ?? e.message}');
+    } catch (e) {
+      print('Unexpected error creating project: $e');
+      throw Exception('Unexpected error: $e');
+    }
+  }
+
+  /// Toggle subtask completion status
+  Future<Map<String, dynamic>> toggleSubtaskCompletion(int subtaskId) async {
+    try {
+      print('Toggling subtask completion: $subtaskId');
+      final response = await _dio.patch(
+        '$baseUrl/sub-tasks/$subtaskId/toggle_completion/',
+      );
+
+      if (response.statusCode == 200) {
+        print('Subtask toggled successfully: ${response.data}');
+        return response.data as Map<String, dynamic>;
+      } else {
+        throw Exception('Failed to toggle subtask: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      print('DioException toggling subtask: ${e.response?.data ?? e.message}');
+      throw Exception('Network error: ${e.response?.data ?? e.message}');
+    } catch (e) {
+      print('Unexpected error toggling subtask: $e');
       throw Exception('Unexpected error: $e');
     }
   }
