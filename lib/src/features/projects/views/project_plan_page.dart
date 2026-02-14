@@ -366,6 +366,26 @@ class _ProjectPlanView extends HookConsumerWidget {
   void _toggleMilestone(BuildContext context, WidgetRef ref, dynamic task,
       List<Milestone> milestones, Milestone m) async {
     try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 12),
+              Text('Updating milestone...'),
+            ],
+          ),
+          duration: Duration(seconds: 1),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
       // Extract subtask ID from milestone ID (format: "milestone_123")
       final subtaskId = int.tryParse(m.id.replaceFirst('milestone_', ''));
 
@@ -387,7 +407,8 @@ class _ProjectPlanView extends HookConsumerWidget {
       final updatedSubtask = response['subtask'];
       final newProgress = response['parent_task_progress'] as int;
 
-      print('Subtask toggled. New task progress: $newProgress');
+      print('✓ Subtask toggled. New task progress: $newProgress');
+      print('✓ Updated subtask status: ${updatedSubtask['status']}');
 
       // Update local milestones for immediate UI feedback
       final updatedMilestones = milestones.map((item) {
@@ -412,11 +433,21 @@ class _ProjectPlanView extends HookConsumerWidget {
       }
 
       // Force refresh API providers to get updated data from backend immediately
-      ref.refresh(apiTasksProvider);
-      ref.refresh(apiProjectsProvider);
+      // Use refresh to force immediate refetch with await
+      print('⟳ Refreshing API providers...');
+      await ref.refresh(apiTasksProvider.future);
+      await ref.refresh(apiProjectsProvider.future);
+
+      // Invalidate dependent providers to trigger rebuild
+      ref.invalidate(projectsWithTasksProvider);
+      ref.invalidate(currentProjectProvider);
+      print('✓ Providers refreshed successfully');
 
       // Show success feedback
       if (context.mounted) {
+        // Clear any existing snackbars
+        ScaffoldMessenger.of(context).clearSnackBars();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -460,13 +491,17 @@ class _ProjectPlanView extends HookConsumerWidget {
         );
       }
     } catch (e) {
-      print('Error toggling milestone: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update milestone: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print('❌ Error toggling milestone: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update milestone: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 

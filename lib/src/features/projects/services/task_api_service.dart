@@ -5,7 +5,7 @@ import '../models/catalog_model.dart';
 
 class TaskApiService {
   final Dio _dio;
-  static const String baseUrl = 'http://127.0.0.1:8001/api';
+  static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   TaskApiService(this._dio);
 

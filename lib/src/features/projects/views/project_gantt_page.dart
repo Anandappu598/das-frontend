@@ -54,6 +54,9 @@ class _GanttChartViewState extends ConsumerState<_GanttChartView> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if dark mode is enabled
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     // 1. Calculate Timeline Range
     final tasks = widget.project.tasks.map((t) => t).toList();
     // if (tasks.isEmpty) return const SizedBox(); // Allow empty to show "Add Item"
@@ -61,12 +64,33 @@ class _GanttChartViewState extends ConsumerState<_GanttChartView> {
     DateTime projectStart;
     DateTime projectEnd;
 
-    if (tasks.isEmpty) {
+    // Use project start date from API if available
+    if (widget.project.projectModel != null) {
+      try {
+        projectStart = DateTime.parse(widget.project.projectModel!.startDate);
+      } catch (_) {
+        projectStart = DateTime.now();
+      }
+    } else if (tasks.isEmpty) {
       projectStart = DateTime.now();
-      projectEnd = DateTime.now().add(const Duration(days: 14));
     } else {
       tasks.sort((a, b) => a.task.startDate.compareTo(b.task.startDate));
       projectStart = tasks.first.task.startDate;
+    }
+
+    // Calculate project end date from tasks or use project due date
+    if (tasks.isEmpty) {
+      if (widget.project.projectModel != null) {
+        try {
+          projectEnd = DateTime.parse(widget.project.projectModel!.dueDate)
+              .add(const Duration(days: 2));
+        } catch (_) {
+          projectEnd = DateTime.now().add(const Duration(days: 14));
+        }
+      } else {
+        projectEnd = DateTime.now().add(const Duration(days: 14));
+      }
+    } else {
       projectEnd = tasks
           .fold(tasks.first.task.endDate,
               (prev, t) => t.task.endDate.isAfter(prev) ? t.task.endDate : prev)
@@ -78,7 +102,20 @@ class _GanttChartViewState extends ConsumerState<_GanttChartView> {
       projectEnd = projectStart.add(const Duration(days: 7));
     }
 
-    final totalDays = projectEnd.difference(projectStart).inDays + 1;
+    // Calculate working days (excluding Sundays)
+    int countWorkingDays(DateTime start, DateTime end) {
+      int count = 0;
+      for (var date = start;
+          date.isBefore(end) || date.isAtSameMomentAs(end);
+          date = date.add(const Duration(days: 1))) {
+        if (date.weekday != DateTime.sunday) {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    final totalDays = countWorkingDays(projectStart, projectEnd);
 
     const double rowHeight = 40.0;
     const double headerHeight = 50.0;
@@ -124,6 +161,7 @@ class _GanttChartViewState extends ConsumerState<_GanttChartView> {
                                   rowHeight: rowHeight,
                                   headerHeight: headerHeight,
                                   taskNameWidth: taskNameWidth,
+                                  isDark: isDark,
                                 ),
                               ),
                               // Assignee Avatars Overflowing at the end of bars
@@ -132,13 +170,41 @@ class _GanttChartViewState extends ConsumerState<_GanttChartView> {
                                 final t = entry.value;
                                 final task = t.task;
                                 final y = headerHeight + (i * rowHeight);
-                                final startOffset = task.startDate
-                                    .difference(projectStart)
-                                    .inDays;
-                                final duration = task.endDate
-                                        .difference(task.startDate)
-                                        .inDays +
-                                    1;
+
+                                // Calculate working day offset and duration (excluding Sundays)
+                                int getWorkingDayOffset(
+                                    DateTime start, DateTime target) {
+                                  int count = 0;
+                                  for (var date = start;
+                                      date.isBefore(target);
+                                      date =
+                                          date.add(const Duration(days: 1))) {
+                                    if (date.weekday != DateTime.sunday) {
+                                      count++;
+                                    }
+                                  }
+                                  return count;
+                                }
+
+                                int countWorkingDaysDuration(
+                                    DateTime start, DateTime end) {
+                                  int count = 0;
+                                  for (var date = start;
+                                      date.isBefore(end) ||
+                                          date.isAtSameMomentAs(end);
+                                      date =
+                                          date.add(const Duration(days: 1))) {
+                                    if (date.weekday != DateTime.sunday) {
+                                      count++;
+                                    }
+                                  }
+                                  return count;
+                                }
+
+                                final startOffset = getWorkingDayOffset(
+                                    projectStart, task.startDate);
+                                final duration = countWorkingDaysDuration(
+                                    task.startDate, task.endDate);
 
                                 final barX =
                                     taskNameWidth + (startOffset * dayWidth);

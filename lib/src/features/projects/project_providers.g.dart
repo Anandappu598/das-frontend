@@ -38,7 +38,7 @@ final currentProjectProvider =
 );
 
 typedef CurrentProjectRef = AutoDisposeFutureProviderRef<ProjectWithTasks?>;
-String _$projectsWithTasksHash() => r'7e51faae1a49942ece5e211f2c1abab62ef21bcb';
+String _$projectsWithTasksHash() => r'6276e764661658d0b8ca8f3e321dab9aa4c0b3f3';
 
 /// All projects with tasks for Activity Catalog
 ///
